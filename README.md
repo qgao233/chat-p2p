@@ -91,35 +91,135 @@ npm run build
 ```
 chat-p2p/
 ├── src/
-│   ├── components/          # Vue 组件
-│   │   └── ChatRoom.vue     # 聊天室主界面
-│   ├── composables/         # Vue3 Composables
-│   │   └── useRoom.ts       # 房间逻辑管理
-│   ├── lib/                 # 核心库
-│   │   └── PeerRoom.ts      # P2P 房间类
-│   ├── services/            # 服务层
-│   │   └── encryption.ts    # 加密服务
-│   ├── config/              # 配置
-│   │   └── rtc.ts           # WebRTC 配置
-│   └── App.vue              # 应用入口
+│   ├── lib/                      # 核心库（模块化架构 ⭐）
+│   │   ├── index.ts              # 统一导出入口
+│   │   ├── types.ts              # 类型定义中心
+│   │   ├── PeerRoom.ts           # 主协调器
+│   │   ├── EventManager.ts       # 事件管理器
+│   │   ├── ActionManager.ts      # 动作管理器
+│   │   ├── StreamManager.ts      # 流管理器
+│   │   ├── ConnectionAnalyzer.ts # 连接分析器
+│   │   └── rtcValidation.ts      # RTC 配置验证
+│   ├── composables/              # Vue3 Composables
+│   │   └── useRoom.ts            # 房间逻辑管理
+│   ├── components/               # Vue 组件
+│   │   └── ChatRoom.vue          # 聊天室主界面
+│   ├── services/                 # 服务层
+│   │   └── encryption.ts         # 加密服务
+│   ├── config/                   # 配置
+│   │   └── rtc.ts                # WebRTC 配置
+│   └── App.vue                   # 应用入口
 ├── package.json
 └── vite.config.ts
 ```
 
+**架构特点**:
+- ✅ **模块化设计** - 按职责拆分为 7 个独立模块
+- ✅ **单一职责** - 每个模块不超过 160 行
+- ✅ **易于测试** - 独立模块可单独测试
+- ✅ **便于扩展** - 新功能可独立添加
+
+详见: [架构重构文档](./ARCHITECTURE_REFACTOR.md)
+
 ## 🔑 核心类说明
 
 ### `PeerRoom` - P2P 房间管理器
+
+支持 **14 种操作类型** 和 **命名空间隔离**：
+
 ```typescript
 class PeerRoom {
   constructor(roomId: string, config?: RoomConfig)
-  onPeerJoin(handler: (peerId: string) => void)
-  onPeerLeave(handler: (peerId: string) => void)
-  createMessageAction(): { sendMessage, onMessage }
-  createMetadataAction(): { sendMetadata, onMetadata }
+  
+  // 事件监听（支持类型化钩子）
+  onPeerJoin(hookType: PeerHookType, handler: (peerId: string) => void)
+  onPeerLeave(hookType: PeerHookType, handler: (peerId: string) => void)
+  onPeerStream(hookType: PeerHookType, handler: (stream, peerId, metadata) => void)
+  
+  // 核心方法：创建命名空间操作
+  makeAction<T>(action: PeerAction, namespace: ActionNamespace): PeerAction
+  
+  // 简化接口
+  createMessageAction(namespace?: ActionNamespace): { sendMessage, onMessage }
+  createMetadataAction(namespace?: ActionNamespace): { sendMetadata, onMetadata }
+  createTypingAction(namespace?: ActionNamespace): { sendTyping, onTyping }
+  createMediaAction(namespace?: ActionNamespace): { sendMedia, onMedia }
+  
+  // 流管理
+  addStream(stream: MediaStream, targetPeers?, metadata?: { type: StreamType })
+  removeStream(stream: MediaStream, targetPeers?)
+  
+  // 连接检测
+  getPeerConnectionTypes(): Promise<Record<string, PeerConnectionType>>
+  
+  // 工具方法
   getPeers(): string[]
   leave(): void
 }
 ```
+
+**命名空间**:
+- `ActionNamespace.GROUP` (`g`) - 群组消息
+- `ActionNamespace.DIRECT_MESSAGE` (`dm`) - 直接消息
+
+**操作类型** (14 种):
+- `MESSAGE` - 文本消息
+- `MEDIA_MESSAGE` - 媒体分享
+- `PEER_METADATA` - 用户信息
+- `TYPING_STATUS_CHANGE` - 输入状态
+- `AUDIO_CHANGE` - 音频状态
+- `VIDEO_CHANGE` - 视频状态
+- `SCREEN_SHARE` - 屏幕共享
+- `FILE_OFFER` - 文件传输
+- 等等...
+
+**流管理**:
+```typescript
+// 添加媒体流（自动排队，防止竞争条件）
+peerRoom.addStream(videoStream, targetPeers, { type: StreamType.VIDEO })
+
+// 移除媒体流
+peerRoom.removeStream(videoStream)
+
+// 监听流事件
+peerRoom.onPeerStream((stream, peerId, metadata) => {
+  console.log('收到流:', metadata?.type)
+})
+```
+
+**连接类型检测**:
+```typescript
+// 获取连接类型（DIRECT 或 RELAY）
+const connectionTypes = await peerRoom.getPeerConnectionTypes()
+console.log(connectionTypes) // { 'peer-id': 'DIRECT' }
+```
+
+**事件钩子系统**:
+```typescript
+// 基础连接管理
+peerRoom.onPeerJoin(PeerHookType.NEW_PEER, (peerId) => {
+  console.log('用户加入:', peerId)
+})
+
+// 视频流管理
+peerRoom.onPeerStream(PeerHookType.VIDEO, (stream, peerId) => {
+  videoElement.srcObject = stream
+})
+
+// 屏幕共享管理
+peerRoom.onPeerStream(PeerHookType.SCREEN, (stream, peerId) => {
+  screenElement.srcObject = stream
+})
+
+// 文件传输管理
+peerRoom.onPeerJoin(PeerHookType.FILE_SHARE, (peerId) => {
+  initFileTransfer(peerId)
+})
+```
+
+详见:
+- [连接状态管理文档](./CONNECTION_STATE.md) - 事件钩子系统完整说明
+- [RTC 配置验证文档](./RTC_VALIDATION.md) - 配置验证系统完整说明
 
 ### `EncryptionService` - 加密服务
 ```typescript

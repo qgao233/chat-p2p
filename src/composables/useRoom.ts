@@ -6,8 +6,8 @@
 import { ref, onUnmounted } from 'vue'
 import { v4 as uuid } from 'uuid'
 import localforage from 'localforage'
-import { PeerRoom } from '../lib/PeerRoom'
-import type { Message, UserMetadata } from '../lib/PeerRoom'
+import { PeerRoom, PeerConnectionTypeEnum as PeerConnectionType, PeerHookType } from '../lib'
+import type { Message, UserMetadata } from '../lib'
 import { encryption } from '../services/encryption'
 import { rtcConfig } from '../config/rtc'
 
@@ -16,6 +16,7 @@ interface Peer {
   userId: string
   username: string
   publicKey: CryptoKey | null
+  connectionType?: PeerConnectionType
 }
 
 export const useRoom = (roomId: string) => {
@@ -117,8 +118,8 @@ export const useRoom = (roomId: string) => {
       }
     })
 
-    // 监听用户加入
-    peerRoom.onPeerJoin(async (peerId) => {
+    // 监听用户加入 - 使用 NEW_PEER 钩子类型
+    peerRoom.onPeerJoin(PeerHookType.NEW_PEER, async (peerId) => {
       console.log('用户加入:', peerId)
       
       // 发送自己的元数据给新加入的用户
@@ -132,13 +133,38 @@ export const useRoom = (roomId: string) => {
       }
     })
 
-    // 监听用户离开
-    peerRoom.onPeerLeave((peerId) => {
+    // 监听用户离开 - 使用 NEW_PEER 钩子类型
+    peerRoom.onPeerLeave(PeerHookType.NEW_PEER, (peerId) => {
       console.log('用户离开:', peerId)
       peers.value = peers.value.filter(p => p.peerId !== peerId)
     })
 
     isConnected.value = true
+
+    // 定期更新连接类型
+    const updateConnectionTypes = async () => {
+      if (!peerRoom) return
+      
+      try {
+        const connectionTypes = await peerRoom.getPeerConnectionTypes()
+        peers.value.forEach(peer => {
+          peer.connectionType = connectionTypes[peer.peerId]
+        })
+      } catch (error) {
+        console.error('更新连接类型失败:', error)
+      }
+    }
+
+    // 初始更新
+    setTimeout(updateConnectionTypes, 2000)
+    
+    // 每 10 秒更新一次连接类型
+    const connectionTypeInterval = setInterval(updateConnectionTypes, 10000)
+    
+    // 清理定时器
+    onUnmounted(() => {
+      clearInterval(connectionTypeInterval)
+    })
   }
 
   /**

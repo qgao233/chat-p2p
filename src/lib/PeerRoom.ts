@@ -1,114 +1,268 @@
 /**
  * PeerRoom - P2P 房间核心类
- * 负责管理 WebRTC 连接、消息传输、用户加入/离开等
+ * 负责协调各个管理器，提供统一的 API
+ * 
+ * 架构：
+ * - EventManager: 事件处理
+ * - ActionManager: 动作管理
+ * - StreamManager: 流管理
+ * - ConnectionAnalyzer: 连接分析
  */
 
 import { joinRoom } from 'trystero/torrent'
+import {
+  isValidRTCConfiguration,
+  sanitizeRTCConfiguration,
+  createDefaultRTCConfiguration
+} from './rtcValidation'
 
-// Trystero Room 返回类型
-type TrysteroRoom = ReturnType<typeof joinRoom>
+import { EventManager } from './EventManager'
+import { ActionManager } from './ActionManager'
+import { StreamManager } from './StreamManager'
+import { ConnectionAnalyzer } from './ConnectionAnalyzer'
 
-export interface RoomConfig {
-  appId?: string
-  password?: string
-  rtcConfig?: RTCConfiguration
-}
+import type {
+  TrysteroRoom,
+  RoomConfig,
+  PeerActionTuple,
+  PeerJoinHandler,
+  PeerLeaveHandler,
+  PeerStreamHandler,
+  PeerConnectionType,
+  StreamType
+} from './types'
 
-export interface Message {
-  id: string
-  userId: string
-  username: string
-  text: string
-  timestamp: number
-  [key: string]: string | number  // 索引签名，满足 DataPayload 要求
-}
+import {
+  ActionNamespace,
+  PeerAction,
+  PeerHookType
+} from './types'
 
-export interface UserMetadata {
-  userId: string
-  username: string
-  publicKey: string
-  [key: string]: string  // 索引签名，满足 DataPayload 要求
-}
+// 重新导出类型，保持向后兼容
+export type {
+  RoomConfig,
+  Message,
+  UserMetadata,
+  MediaMessage,
+  TypingStatus,
+  AudioState,
+  VideoState,
+  PeerConnectionType,
+  PeerJoinHandler,
+  PeerLeaveHandler,
+  PeerStreamHandler
+} from './types'
 
-type PeerJoinHandler = (peerId: string) => void
-type PeerLeaveHandler = (peerId: string) => void
-type MessageHandler = (message: Message, peerId: string) => void
-type MetadataHandler = (metadata: UserMetadata, peerId: string) => void
+export {
+  ActionNamespace,
+  PeerAction,
+  StreamType,
+  PeerHookType,
+  PeerConnectionType as PeerConnectionTypeEnum
+} from './types'
 
 export class PeerRoom {
   private room: TrysteroRoom
-  private peerJoinHandlers: Set<PeerJoinHandler> = new Set()
-  private peerLeaveHandlers: Set<PeerLeaveHandler> = new Set()
-  
+  private eventManager: EventManager
+  private actionManager: ActionManager
+  private streamManager: StreamManager
+  private connectionAnalyzer: ConnectionAnalyzer
+
   constructor(roomId: string, config: RoomConfig = {}) {
     const { appId = 'chat-p2p-mvp', password, rtcConfig } = config
-    
+
+    // 验证并清理 RTC 配置
+    let validatedRtcConfig: RTCConfiguration | undefined
+
+    if (rtcConfig) {
+      if (!isValidRTCConfiguration(rtcConfig)) {
+        console.warn('提供的 RTC 配置无效，尝试清理...')
+        validatedRtcConfig =
+          sanitizeRTCConfiguration(rtcConfig) || createDefaultRTCConfiguration()
+      } else {
+        validatedRtcConfig = rtcConfig
+      }
+    } else {
+      // 如果没有提供配置，使用默认配置
+      validatedRtcConfig = createDefaultRTCConfiguration()
+    }
+
     // 使用 Trystero 创建 P2P 房间
     this.room = joinRoom(
       {
         appId,
         password: password || roomId,
-        rtcConfig,
+        rtcConfig: validatedRtcConfig,
       },
       roomId
     )
 
-    // 监听用户加入事件
+    // 初始化管理器
+    this.eventManager = new EventManager()
+    this.actionManager = new ActionManager(this.room)
+    this.streamManager = new StreamManager(this.room)
+    this.connectionAnalyzer = new ConnectionAnalyzer(this.room)
+
+    // 连接 Trystero 事件到事件管理器
     this.room.onPeerJoin((peerId) => {
-      this.peerJoinHandlers.forEach(handler => handler(peerId))
+      this.eventManager.triggerPeerJoin(peerId)
     })
 
-    // 监听用户离开事件
     this.room.onPeerLeave((peerId) => {
-      this.peerLeaveHandlers.forEach(handler => handler(peerId))
+      this.eventManager.triggerPeerLeave(peerId)
+    })
+
+    this.room.onPeerStream((stream, peerId, metadata) => {
+      this.eventManager.triggerPeerStream(stream, peerId, metadata)
     })
   }
+
+  // ==================== 事件管理 API ====================
 
   /**
    * 注册用户加入事件监听器
    */
-  onPeerJoin = (handler: PeerJoinHandler) => {
-    this.peerJoinHandlers.add(handler)
+  onPeerJoin = (hookType: PeerHookType, handler: PeerJoinHandler) => {
+    this.eventManager.onPeerJoin(hookType, handler)
   }
 
   /**
    * 注册用户离开事件监听器
    */
-  onPeerLeave = (handler: PeerLeaveHandler) => {
-    this.peerLeaveHandlers.add(handler)
+  onPeerLeave = (hookType: PeerHookType, handler: PeerLeaveHandler) => {
+    this.eventManager.onPeerLeave(hookType, handler)
   }
 
   /**
-   * 创建消息发送/接收通道
+   * 注册流事件监听器
    */
-  createMessageAction = () => {
-    const [sendMessage, onMessage] = this.room.makeAction<Message>('message')
-    return { sendMessage, onMessage }
+  onPeerStream = (hookType: PeerHookType, handler: PeerStreamHandler) => {
+    this.eventManager.onPeerStream(hookType, handler)
   }
 
   /**
-   * 创建用户元数据发送/接收通道
+   * 移除特定类型的加入事件监听器
    */
-  createMetadataAction = () => {
-    const [sendMetadata, onMetadata] = this.room.makeAction<UserMetadata>('metadata')
-    return { sendMetadata, onMetadata }
+  offPeerJoin = (hookType: PeerHookType) => {
+    this.eventManager.offPeerJoin(hookType)
+  }
+
+  /**
+   * 移除特定类型的离开事件监听器
+   */
+  offPeerLeave = (hookType: PeerHookType) => {
+    this.eventManager.offPeerLeave(hookType)
+  }
+
+  /**
+   * 移除特定类型的流事件监听器
+   */
+  offPeerStream = (hookType: PeerHookType) => {
+    this.eventManager.offPeerStream(hookType)
+  }
+
+  // ==================== 动作管理 API ====================
+
+  /**
+   * 创建命名空间操作
+   */
+  makeAction = <T extends Record<string, any>>(
+    action: PeerAction,
+    namespace: ActionNamespace
+  ): PeerActionTuple => {
+    return this.actionManager.makeAction<T>(action, namespace)
+  }
+
+  /**
+   * 创建消息发送/接收通道（简化接口）
+   */
+  createMessageAction = (namespace: ActionNamespace = ActionNamespace.GROUP) => {
+    return this.actionManager.createMessageAction(namespace)
+  }
+
+  /**
+   * 创建用户元数据发送/接收通道（简化接口）
+   */
+  createMetadataAction = (namespace: ActionNamespace = ActionNamespace.GROUP) => {
+    return this.actionManager.createMetadataAction(namespace)
+  }
+
+  /**
+   * 创建输入状态通道
+   */
+  createTypingAction = (namespace: ActionNamespace = ActionNamespace.GROUP) => {
+    return this.actionManager.createTypingAction(namespace)
+  }
+
+  /**
+   * 创建媒体消息通道
+   */
+  createMediaAction = (namespace: ActionNamespace = ActionNamespace.GROUP) => {
+    return this.actionManager.createMediaAction(namespace)
+  }
+
+  // ==================== 流管理 API ====================
+
+  /**
+   * 添加媒体流到房间
+   */
+  addStream = (
+    stream: MediaStream,
+    targetPeers?: string[],
+    metadata?: { type: StreamType }
+  ) => {
+    this.streamManager.addStream(stream, targetPeers, metadata)
+  }
+
+  /**
+   * 从房间移除媒体流
+   */
+  removeStream = (stream: MediaStream, targetPeers?: string[]) => {
+    return this.streamManager.removeStream(stream, targetPeers)
+  }
+
+  // ==================== 连接分析 API ====================
+
+  /**
+   * 获取节点连接类型（直接连接或中继连接）
+   */
+  getPeerConnectionTypes = async (): Promise<Record<string, PeerConnectionType>> => {
+    return this.connectionAnalyzer.getPeerConnectionTypes()
   }
 
   /**
    * 获取当前房间内的所有 peer IDs
    */
   getPeers = (): string[] => {
-    const peers = this.room.getPeers()
-    return Object.keys(peers)
+    return this.connectionAnalyzer.getPeers()
+  }
+
+  // ==================== 清理 API ====================
+
+  /**
+   * 清空所有事件监听器
+   */
+  flush = () => {
+    this.eventManager.flush()
+  }
+
+  /**
+   * 清空特定类型的所有事件监听器
+   */
+  flushHookType = (hookType: PeerHookType) => {
+    this.eventManager.flushHookType(hookType)
   }
 
   /**
    * 离开房间并清理资源
    */
   leave = () => {
+    // 清理所有管理器
+    this.actionManager.cleanup()
+    this.streamManager.cleanup()
+    this.eventManager.flush()
+
+    // 离开房间
     this.room.leave()
-    this.peerJoinHandlers.clear()
-    this.peerLeaveHandlers.clear()
   }
 }
-

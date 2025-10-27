@@ -1,0 +1,161 @@
+/**
+ * PeerRoom 类型定义
+ * 包含所有枚举、接口和类型别名
+ */
+
+import type { joinRoom } from 'trystero/torrent'
+
+/**
+ * Trystero Room 返回类型
+ */
+export type TrysteroRoom = ReturnType<typeof joinRoom>
+
+/**
+ * 操作命名空间
+ * - GROUP (g): 群组消息
+ * - DIRECT_MESSAGE (dm): 一对一直接消息
+ */
+export enum ActionNamespace {
+  GROUP = 'g',
+  DIRECT_MESSAGE = 'dm',
+}
+
+/**
+ * 节点连接类型
+ * - DIRECT: 直接点对点连接
+ * - RELAY: 通过 TURN 服务器中继
+ */
+export enum PeerConnectionType {
+  DIRECT = 'DIRECT',
+  RELAY = 'RELAY',
+}
+
+/**
+ * 节点操作类型（每个限制 12 字符）
+ */
+export enum PeerAction {
+  MESSAGE = 'MESSAGE',                    // 文本消息
+  MEDIA_MESSAGE = 'MEDIA_MSG',           // 媒体内容分享
+  PEER_METADATA = 'PEER_META',           // 用户信息交换
+  AUDIO_CHANGE = 'AUDIO_CHG',            // 音频状态更新
+  VIDEO_CHANGE = 'VIDEO_CHG',            // 视频状态更新
+  SCREEN_SHARE = 'SCREEN_SHR',           // 屏幕共享会话
+  FILE_OFFER = 'FILE_OFFER',             // 文件传输发起
+  TYPING_STATUS_CHANGE = 'TYPING_STS',   // 输入状态指示
+  MESSAGE_TRANSCRIPT = 'MSG_TRANS',      // 消息记录同步
+  VERIFICATION_REQUEST = 'VERIFY_REQ',   // 验证请求
+  VERIFICATION_RESPONSE = 'VERIFY_RES',  // 验证响应
+  PEER_NAME_CHANGE = 'NAME_CHG',         // 用户名变更
+  ROOM_JOIN = 'ROOM_JOIN',               // 加入房间
+  ROOM_LEAVE = 'ROOM_LEAVE',             // 离开房间
+}
+
+/**
+ * 流类型
+ */
+export enum StreamType {
+  AUDIO = 'AUDIO',
+  VIDEO = 'VIDEO',
+  SCREEN = 'SCREEN',
+}
+
+/**
+ * 对等方事件钩子类型
+ * 用于区分不同类型的连接事件处理程序
+ */
+export enum PeerHookType {
+  NEW_PEER = 'NEW_PEER',           // 新对等方加入
+  AUDIO = 'AUDIO',                 // 音频流事件
+  VIDEO = 'VIDEO',                 // 视频流事件
+  SCREEN = 'SCREEN',               // 屏幕共享事件
+  FILE_SHARE = 'FILE_SHARE',       // 文件传输事件
+}
+
+/**
+ * 房间配置
+ */
+export interface RoomConfig {
+  appId?: string
+  password?: string
+  rtcConfig?: RTCConfiguration
+}
+
+/**
+ * 消息接口
+ */
+export interface Message {
+  id: string
+  userId: string
+  username: string
+  text: string
+  timestamp: number
+  [key: string]: string | number  // 索引签名，满足 DataPayload 要求
+}
+
+/**
+ * 用户元数据接口
+ */
+export interface UserMetadata {
+  userId: string
+  username: string
+  publicKey: string
+  [key: string]: string  // 索引签名，满足 DataPayload 要求
+}
+
+/**
+ * 媒体消息接口
+ */
+export interface MediaMessage {
+  id: string
+  userId: string
+  username: string
+  magnetURI: string
+  timestamp: number
+  [key: string]: string | number
+}
+
+/**
+ * 输入状态接口
+ */
+export interface TypingStatus {
+  isTyping: boolean
+  [key: string]: boolean
+}
+
+/**
+ * 音频状态接口
+ */
+export interface AudioState {
+  isEnabled: boolean
+  channelName?: string
+  [key: string]: string | boolean | undefined
+}
+
+/**
+ * 视频状态接口
+ */
+export interface VideoState {
+  isEnabled: boolean
+  [key: string]: boolean
+}
+
+/**
+ * 动作处理器类型
+ */
+export type ActionSender<T> = (data: T, peerId?: string) => void
+export type ActionReceiver<T> = (callback: (data: T, peerId: string) => void) => void
+export type ActionProgress = (callback: (percent: number, peerId: string) => void) => void
+export type ActionCleanup = () => void
+
+/**
+ * 对等方动作元组
+ */
+export type PeerActionTuple = [ActionSender<any>, ActionReceiver<any>, ActionProgress, ActionCleanup]
+
+/**
+ * 事件处理器类型
+ */
+export type PeerJoinHandler = (peerId: string) => void
+export type PeerLeaveHandler = (peerId: string) => void
+export type PeerStreamHandler = (stream: MediaStream, peerId: string, metadata?: any) => void
+

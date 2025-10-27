@@ -25,7 +25,12 @@
         <div v-for="peer in peers" :key="peer.peerId" class="user-item">
           <div class="user-avatar">👥</div>
           <div class="user-info">
-            <div class="username">{{ peer.username }}</div>
+            <div class="username">
+              {{ peer.username }}
+              <span v-if="peer.connectionType" class="connection-badge" :class="peer.connectionType">
+                {{ peer.connectionType === 'DIRECT' ? '🔗' : '🔄' }}
+              </span>
+            </div>
             <div class="user-id">{{ peer.userId.slice(0, 8) }}</div>
           </div>
         </div>
@@ -212,6 +217,20 @@ watch(messages, () => {
   font-size: 12px;
   color: #999;
   font-family: monospace;
+}
+
+.connection-badge {
+  font-size: 10px;
+  margin-left: 4px;
+  opacity: 0.7;
+}
+
+.connection-badge.DIRECT {
+  opacity: 1;
+}
+
+.connection-badge.RELAY {
+  opacity: 0.6;
 }
 
 .chat-main {
