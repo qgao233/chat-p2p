@@ -95,13 +95,15 @@ chat-p2p/
 │   │   ├── index.ts              # 统一导出入口
 │   │   ├── types.ts              # 类型定义中心
 │   │   ├── PeerRoom.ts           # 主协调器
-│   │   ├── EventManager.ts       # 事件管理器
-│   │   ├── ActionManager.ts      # 动作管理器
-│   │   ├── StreamManager.ts      # 流管理器
-│   │   ├── ConnectionAnalyzer.ts # 连接分析器
-│   │   └── rtcValidation.ts      # RTC 配置验证
+│   │   ├── res/                  # 资源管理器
+│   │   │   ├── EventManager.ts       # 事件管理器
+│   │   │   ├── ActionManager.ts      # 动作管理器
+│   │   │   ├── StreamManager.ts      # 流管理器
+│   │   │   ├── ConnectionManager.ts  # 连接分析器
+│   │   │   └── PeerVerificationManager.ts # 对等方验证管理器
+│   │   └── rtcValidation.ts      # RTC 配置验证管理器
 │   ├── composables/              # Vue3 Composables
-│   │   └── useRoom.ts            # 房间逻辑管理
+│   │   └── useRoom.ts            # 房间逻辑管理（集成验证功能）
 │   ├── components/               # Vue 组件
 │   │   └── ChatRoom.vue          # 聊天室主界面
 │   ├── services/                 # 服务层
@@ -221,6 +223,50 @@ peerRoom.onPeerJoin(PeerHookType.FILE_SHARE, (peerId) => {
 - [连接状态管理文档](./CONNECTION_STATE.md) - 事件钩子系统完整说明
 - [RTC 配置验证文档](./RTC_VALIDATION.md) - 配置验证系统完整说明
 
+### `RTCValidationManager` - RTC 配置验证管理器
+
+提供完整的 RTCConfiguration 验证、清理和合并功能：
+
+```typescript
+class RTCValidationManager {
+  // 验证配置是否有效
+  isValidRTCConfiguration(data: any): data is RTCConfiguration
+  
+  // 清理并返回安全的配置
+  sanitizeRTCConfiguration(data: any): RTCConfiguration | null
+  
+  // 创建默认配置
+  createDefaultRTCConfiguration(): RTCConfiguration
+  
+  // 合并用户配置与默认配置
+  mergeRTCConfiguration(
+    userConfig?: RTCConfiguration,
+    defaultConfig?: RTCConfiguration
+  ): RTCConfiguration
+  
+  // 详细验证并返回错误信息
+  validateRTCConfiguration(data: any): RTCValidationResult
+}
+
+// 使用单例实例
+import { rtcValidationManager } from './lib'
+
+const config = rtcValidationManager.createDefaultRTCConfiguration()
+const isValid = rtcValidationManager.isValidRTCConfiguration(config)
+
+// 或使用便捷函数（向后兼容）
+import { isValidRTCConfiguration } from './lib'
+const isValid = isValidRTCConfiguration(config)
+```
+
+**特性**:
+- ✅ 验证 ICE 服务器 URL 格式（stun/turn/turns）
+- ✅ 验证认证凭据（username/credential）
+- ✅ 验证传输策略（iceTransportPolicy/bundlePolicy）
+- ✅ 自动清理无效配置
+- ✅ 提供详细的验证错误信息
+- ✅ 支持配置合并
+
 ### `EncryptionService` - 加密服务
 ```typescript
 class EncryptionService {
@@ -233,21 +279,59 @@ class EncryptionService {
 ```
 
 ### `useRoom` - Vue3 Composable
+
+集成了房间管理和对等方验证功能的完整 Composable：
+
 ```typescript
 function useRoom(roomId: string) {
   return {
+    // 状态
     messages: Ref<Message[]>
-    peers: Ref<Peer[]>
+    peers: Ref<Peer[]>  // 包含验证状态
     currentUserId: Ref<string>
     currentUsername: Ref<string>
     isConnected: Ref<boolean>
+    
+    // 验证统计（计算属性）
+    verifiedPeersCount: ComputedRef<number>
+    verifyingPeersCount: ComputedRef<number>
+    unverifiedPeersCount: ComputedRef<number>
+    allPeersVerified: ComputedRef<boolean>
+    
+    // 房间方法
     joinRoom: () => Promise<void>
     sendChatMessage: (text: string) => void
     updateUsername: (name: string) => Promise<void>
     leaveRoom: () => void
+    
+    // 验证方法
+    startVerification: (peerId: string) => Promise<void>
+    getVerificationState: (peerId: string) => PeerVerificationState
+    isVerified: (peerId: string) => boolean
+    updatePeerVerificationState: (peerId: string) => void
   }
 }
 ```
+
+**Peer 接口**:
+```typescript
+interface Peer {
+  peerId: string
+  userId: string
+  username: string
+  publicKey: CryptoKey | null
+  connectionType?: PeerConnectionType
+  verificationState?: PeerVerificationState  // 验证状态
+  isVerified?: boolean                       // 是否已验证
+}
+```
+
+**特性**:
+- ✅ 自动密钥管理和持久化
+- ✅ 自动启动对等方验证
+- ✅ 实时更新验证状态
+- ✅ 集成连接类型检测
+- ✅ 提供验证统计信息
 
 ## 🔧 技术栈
 

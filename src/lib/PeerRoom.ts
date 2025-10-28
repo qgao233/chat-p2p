@@ -6,20 +6,23 @@
  * - EventManager: 事件处理
  * - ActionManager: 动作管理
  * - StreamManager: 流管理
- * - ConnectionAnalyzer: 连接分析
+ * - ConnectionManager: 连接分析
  */
 
 import { joinRoom } from 'trystero/torrent'
-import {
-  isValidRTCConfiguration,
-  sanitizeRTCConfiguration,
-  createDefaultRTCConfiguration
-} from './rtcValidation'
 
-import { EventManager } from './EventManager'
-import { ActionManager } from './ActionManager'
-import { StreamManager } from './StreamManager'
-import { ConnectionAnalyzer } from './ConnectionAnalyzer'
+import { rtcValidationManager } from './res/RtcValidationManager'
+
+import { EventManager } from './res/EventManager'
+import { ActionManager } from './res/ActionManager'
+import { StreamManager } from './res/StreamManager'
+import { ConnectionManager } from './res/ConnectionManager'
+import { 
+  PeerVerificationManager,
+  type VerificationConfig,
+  type PeerVerificationMetadata,
+  PeerVerificationState
+} from './res/PeerVerificationManager'
 
 import type {
   TrysteroRoom,
@@ -38,35 +41,13 @@ import {
   PeerHookType
 } from './types'
 
-// 重新导出类型，保持向后兼容
-export type {
-  RoomConfig,
-  Message,
-  UserMetadata,
-  MediaMessage,
-  TypingStatus,
-  AudioState,
-  VideoState,
-  PeerConnectionType,
-  PeerJoinHandler,
-  PeerLeaveHandler,
-  PeerStreamHandler
-} from './types'
-
-export {
-  ActionNamespace,
-  PeerAction,
-  PeerStreamType,
-  PeerHookType,
-  PeerConnectionType as PeerConnectionTypeEnum
-} from './types'
-
 export class PeerRoom {
   private room: TrysteroRoom
-  private eventManager: EventManager
   private actionManager: ActionManager
+  private connectionManager: ConnectionManager
+  private eventManager: EventManager
   private streamManager: StreamManager
-  private connectionAnalyzer: ConnectionAnalyzer
+  private verificationManager: PeerVerificationManager
 
   constructor(roomId: string, config: RoomConfig = {}) {
     const { appId = 'chat-p2p-mvp', password, rtcConfig } = config
@@ -75,16 +56,17 @@ export class PeerRoom {
     let validatedRtcConfig: RTCConfiguration | undefined
 
     if (rtcConfig) {
-      if (!isValidRTCConfiguration(rtcConfig)) {
+      if (!rtcValidationManager.isValidRTCConfiguration(rtcConfig)) {
         console.warn('提供的 RTC 配置无效，尝试清理...')
         validatedRtcConfig =
-          sanitizeRTCConfiguration(rtcConfig) || createDefaultRTCConfiguration()
+          rtcValidationManager.sanitizeRTCConfiguration(rtcConfig) || 
+          rtcValidationManager.createDefaultRTCConfiguration()
       } else {
         validatedRtcConfig = rtcConfig
       }
     } else {
       // 如果没有提供配置，使用默认配置
-      validatedRtcConfig = createDefaultRTCConfiguration()
+      validatedRtcConfig = rtcValidationManager.createDefaultRTCConfiguration()
     }
 
     // 使用 Trystero 创建 P2P 房间
@@ -101,7 +83,14 @@ export class PeerRoom {
     this.eventManager = new EventManager()
     this.actionManager = new ActionManager(this.room)
     this.streamManager = new StreamManager(this.room)
-    this.connectionAnalyzer = new ConnectionAnalyzer(this.room)
+    this.connectionManager = new ConnectionManager(this.room)
+    this.verificationManager = new PeerVerificationManager(this, config.verificationConfig)
+
+    // 延迟初始化验证管理器（避免循环依赖）
+    // 使用 setTimeout 确保所有管理器都已完全初始化
+    setTimeout(() => {
+      this.verificationManager.initialize()
+    }, 0)
 
     // 连接 Trystero 事件到事件管理器
     this.room.onPeerJoin((peerId) => {
@@ -297,14 +286,14 @@ export class PeerRoom {
    * 获取节点连接类型（直接连接或中继连接）
    */
   getPeerConnectionTypes = async (): Promise<Record<string, PeerConnectionType>> => {
-    return this.connectionAnalyzer.getPeerConnectionTypes()
+    return this.connectionManager.getPeerConnectionTypes()
   }
 
   /**
    * 获取当前房间内的所有 peer IDs
    */
   getPeers = (): string[] => {
-    return this.connectionAnalyzer.getPeers()
+    return this.connectionManager.getPeers()
   }
 
   // ==================== 清理 API ====================
@@ -323,6 +312,69 @@ export class PeerRoom {
     this.eventManager.flushHookType(hookType)
   }
 
+  // ==================== 验证管理 API ====================
+
+  /**
+   * 设置本地私钥（用于验证）
+   */
+  setLocalPrivateKey = (privateKey: CryptoKey): void => {
+    this.verificationManager.setLocalPrivateKey(privateKey)
+  }
+
+  /**
+   * 启动对等方验证
+   */
+  initiateVerification = async (
+    peerId: string,
+    publicKey: CryptoKey,
+    privateKey: CryptoKey
+  ): Promise<void> => {
+    return this.verificationManager.initiateVerification(peerId, publicKey, privateKey)
+  }
+
+  /**
+   * 注册对等方公钥
+   */
+  registerPublicKey = (peerId: string, publicKey: CryptoKey): void => {
+    this.verificationManager.registerPublicKey(peerId, publicKey)
+  }
+
+  /**
+   * 获取对等方验证状态
+   */
+  getVerificationState = (peerId: string): PeerVerificationState => {
+    return this.verificationManager.getVerificationState(peerId)
+  }
+
+  /**
+   * 检查对等方是否已验证
+   */
+  isVerified = (peerId: string): boolean => {
+    return this.verificationManager.isVerified(peerId)
+  }
+
+  /**
+   * 获取对等方验证元数据
+   */
+  getVerificationMetadata = (peerId: string): PeerVerificationMetadata | undefined => {
+    return this.verificationManager.getVerificationMetadata(peerId)
+  }
+
+  /**
+   * 获取所有已验证的对等方
+   */
+  getVerifiedPeers = (): string[] => {
+    return this.verificationManager.getVerifiedPeers()
+  }
+
+  /**
+   * 移除对等方验证信息
+   */
+  removePeerVerification = (peerId: string): void => {
+    this.verificationManager.removePeer(peerId)
+  }
+
+
   /**
    * 离开房间并清理资源
    */
@@ -330,6 +382,7 @@ export class PeerRoom {
     // 清理所有管理器
     this.actionManager.cleanup()
     this.streamManager.cleanup()
+    this.verificationManager.cleanup()
     this.eventManager.flush()
 
     // 离开房间

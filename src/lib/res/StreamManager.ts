@@ -3,7 +3,7 @@
  * 负责管理媒体流的添加、移除和队列处理
  */
 
-import type { TrysteroRoom, PeerStreamType } from './types'
+import type { TrysteroRoom, PeerStreamType } from '../types'
 
 // 流队列延迟（毫秒）
 const STREAM_QUEUE_ADD_DELAY = 1000

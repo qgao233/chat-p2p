@@ -72,7 +72,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, watch } from 'vue'
+import { ref, nextTick, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoom } from '../composables/useRoom'
 
 const props = defineProps<{
@@ -87,13 +87,23 @@ const {
   isConnected,
   joinRoom,
   sendChatMessage,
+  leaveRoom,
 } = useRoom(props.roomId)
 
 const messageText = ref('')
 const messagesContainer = ref<HTMLElement | null>(null)
 
-// 自动加入房间
-joinRoom()
+// 组件挂载时加入房间
+onMounted(() => {
+  console.log('[ChatRoom] 组件已挂载，加入房间')
+  joinRoom()
+})
+
+// 组件卸载前离开房间
+onBeforeUnmount(() => {
+  console.log('[ChatRoom] 组件即将卸载，离开房间')
+  leaveRoom()
+})
 
 // 发送消息
 const handleSend = () => {

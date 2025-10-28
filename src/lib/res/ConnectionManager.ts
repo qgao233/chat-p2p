@@ -1,12 +1,12 @@
 /**
- * ConnectionAnalyzer - 连接分析器
+ * ConnectionManager - 连接分析器
  * 负责分析和检测 P2P 连接类型
  */
 
-import type { TrysteroRoom, PeerConnectionType } from './types'
-import { PeerConnectionType as ConnectionType } from './types'
+import type { TrysteroRoom } from '../types'
+import { PeerConnectionType } from '../types'
 
-export class ConnectionAnalyzer {
+export class ConnectionManager {
   constructor(private room: TrysteroRoom) {}
 
   /**
@@ -41,8 +41,8 @@ export class ConnectionAnalyzer {
           stats.get(selectedLocalCandidate)?.candidateType === 'relay'
 
         peerConnections[peerId] = isRelay
-          ? ConnectionType.RELAY
-          : ConnectionType.DIRECT
+          ? PeerConnectionType.RELAY
+          : PeerConnectionType.DIRECT
       })
     )
 

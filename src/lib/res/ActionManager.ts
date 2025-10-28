@@ -21,9 +21,9 @@ import type {
   PeerNameChange,
   RoomJoinNotification,
   RoomLeaveNotification
-} from './types'
+} from '../types'
 
-import { PeerAction } from './types'
+import { PeerAction } from '../types'
 
 export class ActionManager {
   private actions: Map<string, PeerActionTuple> = new Map()

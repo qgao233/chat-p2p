@@ -102,6 +102,10 @@ export interface RoomConfig {
   appId?: string
   password?: string
   rtcConfig?: RTCConfiguration
+  verificationConfig?: {
+    timeout?: number
+    autoVerify?: boolean
+  }
 }
 
 /**

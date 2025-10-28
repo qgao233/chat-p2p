@@ -1,11 +1,11 @@
 /**
- * PeerVerification - 对等方验证系统
+ * PeerVerificationManager - 对等方验证系统
  * 防止中间人攻击，确保真实的对等方连接
  */
 
-import type { PeerRoom } from '../lib'
-import { PeerAction, ActionNamespace } from '../lib'
-import { encryption } from '../services/encryption'
+import type { PeerRoom } from '../PeerRoom'
+import { PeerAction,ActionNamespace } from '../types'
+import { encryption } from '../../services/encryption'
 
 /**
  * 对等方验证状态
@@ -74,11 +74,22 @@ export class PeerVerificationManager {
   private config: Required<VerificationConfig>
   private verificationMap: Map<string, PeerVerificationMetadata> = new Map()
   private publicKeyMap: Map<string, CryptoKey> = new Map()
+  private localPrivateKey: CryptoKey | null = null
+  private initialized: boolean = false
 
   constructor(peerRoom: PeerRoom, config: VerificationConfig = {}) {
     this.peerRoom = peerRoom
     this.config = { ...DEFAULT_CONFIG, ...config }
+    // 不在构造函数中立即设置通道，避免循环依赖
+  }
+
+  /**
+   * 初始化验证管理器（延迟初始化）
+   */
+  initialize = () => {
+    if (this.initialized) return
     this.setupVerificationChannels()
+    this.initialized = true
   }
 
   /**
@@ -129,9 +140,17 @@ export class PeerVerificationManager {
   }
 
   /**
+   * 设置本地私钥
+   */
+  setLocalPrivateKey = (privateKey: CryptoKey) => {
+    this.localPrivateKey = privateKey
+  }
+
+  /**
    * 注册对等方的公钥
    */
   registerPublicKey = (peerId: string, publicKey: CryptoKey) => {
+    this.initialize()  // 确保已初始化
     this.publicKeyMap.set(peerId, publicKey)
   }
 
@@ -146,6 +165,8 @@ export class PeerVerificationManager {
     publicKey: CryptoKey,
     privateKey: CryptoKey
   ): Promise<void> => {
+    this.initialize()  // 确保已初始化
+    
     // 生成本地令牌
     const localToken = this.generateToken()
     const requestId = this.generateRequestId()
@@ -345,9 +366,7 @@ export class PeerVerificationManager {
    * 获取本地私钥（需要外部提供）
    */
   private getPrivateKey = async (): Promise<CryptoKey | null> => {
-    // 这里需要从外部获取私钥
-    // 在实际使用中，应该通过构造函数或方法注入
-    return null
+    return this.localPrivateKey
   }
 
   /**

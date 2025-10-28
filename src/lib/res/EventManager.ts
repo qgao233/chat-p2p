@@ -8,7 +8,7 @@ import type {
   PeerJoinHandler,
   PeerLeaveHandler,
   PeerStreamHandler
-} from './types'
+} from '../types'
 
 export class EventManager {
   private peerJoinHandlers: Map<PeerHookType, Set<PeerJoinHandler>> = new Map()

@@ -46,27 +46,26 @@ export {
 
 // RTC 验证工具
 export {
-  isValidRTCConfiguration,
-  sanitizeRTCConfiguration,
-  createDefaultRTCConfiguration,
-  mergeRTCConfiguration,
-  validateRTCConfiguration,
+  rtcValidationManager,
   RTCValidationError
-} from './rtcValidation'
+} from './res/RtcValidationManager'
 
-export type { RTCValidationResult } from './rtcValidation'
+export type { RTCValidationResult } from './res/RtcValidationManager'
 
 // 管理器（高级用户可以单独使用）
-export { EventManager } from './EventManager'
-export { ActionManager } from './ActionManager'
-export { StreamManager } from './StreamManager'
-export { ConnectionAnalyzer } from './ConnectionAnalyzer'
-export { PeerVerificationManager } from './PeerVerification'
+export { EventManager } from './res/EventManager'
+export { ActionManager } from './res/ActionManager'
+export { StreamManager } from './res/StreamManager'
+export { ConnectionManager } from './res/ConnectionManager'
+export { 
+  PeerVerificationManager,
+  PeerVerificationState as PeerVerificationStateEnum
+} from './res/PeerVerificationManager'
 
 export type {
   PeerVerificationMetadata,
   VerificationConfig,
   VerificationTokenEncrypted,
   VerificationTokenRaw
-} from './PeerVerification'
+} from './res/PeerVerificationManager'
 
