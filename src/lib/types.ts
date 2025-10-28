@@ -140,6 +140,82 @@ export interface VideoState {
 }
 
 /**
+ * 屏幕共享状态接口
+ */
+export interface ScreenShareState {
+  isSharing: boolean
+  [key: string]: boolean
+}
+
+/**
+ * 文件传输接口
+ */
+export interface FileOffer {
+  id: string
+  fileName: string
+  fileSize: number
+  fileType: string
+  [key: string]: string | number
+}
+
+/**
+ * 消息记录接口
+ */
+export interface MessageTranscript {
+  messages: string
+  timestamp: number
+  [key: string]: string | number
+}
+
+/**
+ * 验证请求接口
+ */
+export interface VerificationRequest {
+  requestId: string
+  challenge: string
+  [key: string]: string
+}
+
+/**
+ * 验证响应接口
+ */
+export interface VerificationResponse {
+  requestId: string
+  response: string
+  verified: string
+  [key: string]: string
+}
+
+/**
+ * 用户名变更接口
+ */
+export interface PeerNameChange {
+  userId: string
+  newName: string
+  [key: string]: string
+}
+
+/**
+ * 房间加入通知接口
+ */
+export interface RoomJoinNotification {
+  userId: string
+  username: string
+  timestamp: number
+  [key: string]: string | number
+}
+
+/**
+ * 房间离开通知接口
+ */
+export interface RoomLeaveNotification {
+  userId: string
+  username: string
+  timestamp: number
+  [key: string]: string | number
+}
+
+/**
  * 动作处理器类型
  */
 export type ActionSender<T> = (data: T, peerId?: string) => void

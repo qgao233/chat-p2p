@@ -201,6 +201,76 @@ export class PeerRoom {
     return this.actionManager.createMediaAction(namespace)
   }
 
+  /**
+   * 创建音频状态通道
+   */
+  createAudioChangeAction = (namespace: ActionNamespace = ActionNamespace.GROUP) => {
+    return this.actionManager.createAudioChangeAction(namespace)
+  }
+
+  /**
+   * 创建视频状态通道
+   */
+  createVideoChangeAction = (namespace: ActionNamespace = ActionNamespace.GROUP) => {
+    return this.actionManager.createVideoChangeAction(namespace)
+  }
+
+  /**
+   * 创建屏幕共享通道
+   */
+  createScreenShareAction = (namespace: ActionNamespace = ActionNamespace.GROUP) => {
+    return this.actionManager.createScreenShareAction(namespace)
+  }
+
+  /**
+   * 创建文件传输通道
+   */
+  createFileOfferAction = (namespace: ActionNamespace = ActionNamespace.GROUP) => {
+    return this.actionManager.createFileOfferAction(namespace)
+  }
+
+  /**
+   * 创建消息记录同步通道
+   */
+  createMessageTranscriptAction = (namespace: ActionNamespace = ActionNamespace.GROUP) => {
+    return this.actionManager.createMessageTranscriptAction(namespace)
+  }
+
+  /**
+   * 创建验证请求通道
+   */
+  createVerificationRequestAction = (namespace: ActionNamespace = ActionNamespace.GROUP) => {
+    return this.actionManager.createVerificationRequestAction(namespace)
+  }
+
+  /**
+   * 创建验证响应通道
+   */
+  createVerificationResponseAction = (namespace: ActionNamespace = ActionNamespace.GROUP) => {
+    return this.actionManager.createVerificationResponseAction(namespace)
+  }
+
+  /**
+   * 创建用户名变更通道
+   */
+  createPeerNameChangeAction = (namespace: ActionNamespace = ActionNamespace.GROUP) => {
+    return this.actionManager.createPeerNameChangeAction(namespace)
+  }
+
+  /**
+   * 创建房间加入通知通道
+   */
+  createRoomJoinAction = (namespace: ActionNamespace = ActionNamespace.GROUP) => {
+    return this.actionManager.createRoomJoinAction(namespace)
+  }
+
+  /**
+   * 创建房间离开通知通道
+   */
+  createRoomLeaveAction = (namespace: ActionNamespace = ActionNamespace.GROUP) => {
+    return this.actionManager.createRoomLeaveAction(namespace)
+  }
+
   // ==================== 流管理 API ====================
 
   /**
