@@ -43,11 +43,20 @@ export enum PeerAction {
   FILE_OFFER = 'FILE_OFFER',             // 文件传输发起
   TYPING_STATUS_CHANGE = 'TYPING_STS',   // 输入状态指示
   MESSAGE_TRANSCRIPT = 'MSG_TRANS',      // 消息记录同步
-  VERIFICATION_REQUEST = 'VERIFY_REQ',   // 验证请求
-  VERIFICATION_RESPONSE = 'VERIFY_RES',  // 验证响应
+  VERIFICATION_REQUEST = 'VERIFY_REQ',   // 验证请求（加密令牌）
+  VERIFICATION_RESPONSE = 'VERIFY_RES',  // 验证响应（原始令牌）
   PEER_NAME_CHANGE = 'NAME_CHG',         // 用户名变更
   ROOM_JOIN = 'ROOM_JOIN',               // 加入房间
   ROOM_LEAVE = 'ROOM_LEAVE',             // 离开房间
+}
+
+/**
+ * 对等方验证状态
+ */
+export enum PeerVerificationState {
+  VERIFYING = 'VERIFYING',     // 验证进行中
+  VERIFIED = 'VERIFIED',       // 验证成功
+  UNVERIFIED = 'UNVERIFIED',   // 验证失败或超时
 }
 
 /**

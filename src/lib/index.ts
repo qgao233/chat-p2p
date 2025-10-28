@@ -40,7 +40,8 @@ export {
   PeerAction,
   StreamType,
   PeerHookType,
-  PeerConnectionType as PeerConnectionTypeEnum
+  PeerConnectionType as PeerConnectionTypeEnum,
+  PeerVerificationState
 } from './types'
 
 // RTC 验证工具
@@ -60,4 +61,12 @@ export { EventManager } from './EventManager'
 export { ActionManager } from './ActionManager'
 export { StreamManager } from './StreamManager'
 export { ConnectionAnalyzer } from './ConnectionAnalyzer'
+export { PeerVerificationManager } from './PeerVerification'
+
+export type {
+  PeerVerificationMetadata,
+  VerificationConfig,
+  VerificationTokenEncrypted,
+  VerificationTokenRaw
+} from './PeerVerification'
 
