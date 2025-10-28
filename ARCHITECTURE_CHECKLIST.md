@@ -7,7 +7,7 @@
   - `ActionNamespace` (2 个值)
   - `PeerConnectionType` (2 个值)
   - `PeerAction` (14 个值)
-  - `StreamType` (3 个值)
+  - `PeerStreamType` (3 个值)
   - `PeerHookType` (5 个值)
 - ✅ 15 个数据接口
   - `RoomConfig`
@@ -154,7 +154,7 @@
 - ✅ 枚举导出 (5 个)
   - `ActionNamespace`
   - `PeerAction`
-  - `StreamType`
+  - `PeerStreamType`
   - `PeerHookType`
   - `PeerConnectionTypeEnum`
 - ✅ RTC 验证工具 (6 个)

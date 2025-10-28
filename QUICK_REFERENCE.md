@@ -85,9 +85,9 @@ PeerAction.ROOM_LEAVE             // 离开房间
 
 ### 4. 流类型
 ```typescript
-StreamType.AUDIO   // 音频流
-StreamType.VIDEO   // 视频流
-StreamType.SCREEN  // 屏幕流
+PeerStreamType.AUDIO   // 音频流
+PeerStreamType.VIDEO   // 视频流
+PeerStreamType.SCREEN  // 屏幕流
 ```
 
 ## 🎯 常用 API
@@ -143,7 +143,7 @@ sendScreenShare({ isSharing: true })
 ```typescript
 // 添加流
 const stream = await navigator.mediaDevices.getUserMedia({ video: true })
-peerRoom.addStream(stream, undefined, { type: StreamType.VIDEO })
+peerRoom.addStream(stream, undefined, { type: PeerStreamType.VIDEO })
 
 // 移除流
 peerRoom.removeStream(stream)
@@ -425,11 +425,11 @@ try {
 ### 5. 流管理
 ```typescript
 // 添加流时提供元数据
-peerRoom.addStream(stream, undefined, { type: StreamType.VIDEO })
+peerRoom.addStream(stream, undefined, { type: PeerStreamType.VIDEO })
 
 // 监听流时检查元数据
 peerRoom.onPeerStream(PeerHookType.VIDEO, (stream, peerId, metadata) => {
-  if (metadata?.type === StreamType.VIDEO) {
+  if (metadata?.type === PeerStreamType.VIDEO) {
     // 处理视频流
   }
 })

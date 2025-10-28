@@ -146,7 +146,7 @@ class PeerRoom {
   createMediaAction(namespace?: ActionNamespace): { sendMedia, onMedia }
   
   // 流管理
-  addStream(stream: MediaStream, targetPeers?, metadata?: { type: StreamType })
+  addStream(stream: MediaStream, targetPeers?, metadata?: { type: PeerStreamType })
   removeStream(stream: MediaStream, targetPeers?)
   
   // 连接检测
@@ -176,7 +176,7 @@ class PeerRoom {
 **流管理**:
 ```typescript
 // 添加媒体流（自动排队，防止竞争条件）
-peerRoom.addStream(videoStream, targetPeers, { type: StreamType.VIDEO })
+peerRoom.addStream(videoStream, targetPeers, { type: PeerStreamType.VIDEO })
 
 // 移除媒体流
 peerRoom.removeStream(videoStream)

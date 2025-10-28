@@ -248,7 +248,7 @@ const setupVideoChat = (peerRoom: PeerRoom) => {
   // 发送本地视频流
   const startVideo = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true })
-    peerRoom.addStream(stream, undefined, { type: StreamType.VIDEO })
+    peerRoom.addStream(stream, undefined, { type: PeerStreamType.VIDEO })
   }
 }
 ```
@@ -274,7 +274,7 @@ const setupScreenShare = (peerRoom: PeerRoom) => {
   // 开始屏幕共享
   const startScreenShare = async () => {
     const stream = await navigator.mediaDevices.getDisplayMedia({ video: true })
-    peerRoom.addStream(stream, undefined, { type: StreamType.SCREEN })
+    peerRoom.addStream(stream, undefined, { type: PeerStreamType.SCREEN })
     
     // 监听用户停止共享
     stream.getVideoTracks()[0].onended = () => {
@@ -321,7 +321,7 @@ const setupFileShare = (peerRoom: PeerRoom) => {
 
 ```typescript
 import { onMounted, onUnmounted } from 'vue'
-import { PeerRoom, PeerHookType, StreamType } from './lib/PeerRoom'
+import { PeerRoom, PeerHookType, PeerStreamType } from './lib/PeerRoom'
 
 export const useVideoChat = (roomId: string) => {
   let peerRoom: PeerRoom | null = null
@@ -374,7 +374,7 @@ export const useVideoChat = (roomId: string) => {
     if (!peerRoom) return
     
     const stream = await navigator.mediaDevices.getUserMedia({ video: true })
-    peerRoom.addStream(stream, undefined, { type: StreamType.VIDEO })
+    peerRoom.addStream(stream, undefined, { type: PeerStreamType.VIDEO })
   }
 
   const stopVideo = () => {

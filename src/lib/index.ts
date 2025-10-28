@@ -38,7 +38,7 @@ export type {
 export {
   ActionNamespace,
   PeerAction,
-  StreamType,
+  PeerStreamType,
   PeerHookType,
   PeerConnectionType as PeerConnectionTypeEnum,
   PeerVerificationState

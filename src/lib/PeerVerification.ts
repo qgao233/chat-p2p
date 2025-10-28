@@ -3,8 +3,8 @@
  * 防止中间人攻击，确保真实的对等方连接
  */
 
-import type { PeerRoom, ActionNamespace } from '../lib'
-import { PeerAction, ActionNamespace as ActionNS } from '../lib'
+import type { PeerRoom } from '../lib'
+import { PeerAction, ActionNamespace } from '../lib'
 import { encryption } from '../services/encryption'
 
 /**
@@ -63,7 +63,7 @@ export interface VerificationConfig {
 const DEFAULT_CONFIG: Required<VerificationConfig> = {
   timeout: 30000,      // 30 秒
   tokenLength: 32,     // 32 字节
-  namespace: ActionNS.GROUP,
+  namespace: ActionNamespace.GROUP,
 }
 
 /**

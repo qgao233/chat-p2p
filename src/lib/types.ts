@@ -63,6 +63,21 @@ export enum PeerVerificationState {
  * 流类型
  */
 export enum StreamType {
+  WEBCAM = 'WEBCAM',            // 摄像头
+  MICROPHONE = 'MICROPHONE',    // 麦克风
+  SCREEN_SHARE = 'SCREEN_SHARE', // 屏幕共享
+}
+
+
+export enum AudioChannelName{
+  MICROPHONE = 'MICROPHONE',    // 麦克风
+  SYSTEM_AUDIO_IN_SCREEN_SHARE = 'SYSTEM_AUDIO_IN_SCREEN_SHARE', // 屏幕共享中的系统音频
+}
+
+/**
+ * 对等方流类型
+ */
+export enum PeerStreamType {
   AUDIO = 'AUDIO',
   VIDEO = 'VIDEO',
   SCREEN = 'SCREEN',

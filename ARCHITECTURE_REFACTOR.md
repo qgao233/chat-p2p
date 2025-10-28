@@ -48,7 +48,7 @@ src/lib/
 **职责**: 定义所有类型、接口、枚举
 
 **导出**:
-- 枚举: `ActionNamespace`, `PeerAction`, `StreamType`, `PeerHookType`, `PeerConnectionType`
+- 枚举: `ActionNamespace`, `PeerAction`, `PeerStreamType`, `PeerHookType`, `PeerConnectionType`
 - 接口: `Message`, `UserMetadata`, `MediaMessage`, `TypingStatus`, `AudioState`, `VideoState`, `RoomConfig`
 - 类型: `TrysteroRoom`, `ActionSender`, `ActionReceiver`, `PeerActionTuple`, 事件处理器类型
 
