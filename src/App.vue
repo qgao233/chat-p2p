@@ -42,14 +42,6 @@ const updateUrl = (id: string) => {
   window.history.pushState({}, '', url.toString())
 }
 
-// 复制房间链接
-const copyRoomLink = () => {
-  const url = new URL(window.location.href)
-  url.searchParams.set('room', roomId.value)
-  navigator.clipboard.writeText(url.toString())
-  alert('房间链接已复制！')
-}
-
 // 离开房间
 const leaveRoom = () => {
   isInRoom.value = false
@@ -118,15 +110,7 @@ const leaveRoom = () => {
 
     <!-- 聊天室 -->
     <div v-else class="room-container">
-      <div class="room-header-actions">
-        <button class="btn-icon" @click="copyRoomLink" title="复制房间链接">
-          📋
-        </button>
-        <button class="btn-icon btn-danger" @click="leaveRoom" title="离开房间">
-          🚪
-        </button>
-      </div>
-      <ChatRoom :roomId="roomId" />
+      <ChatRoom :roomId="roomId" @leave="leaveRoom" />
     </div>
   </div>
 </template>
@@ -282,39 +266,7 @@ body {
 }
 
 .room-container {
-  position: relative;
   width: 100%;
   height: 100vh;
-}
-
-.room-header-actions {
-  position: absolute;
-  top: 10px;
-  right: 20px;
-  z-index: 1000;
-  display: flex;
-  gap: 10px;
-}
-
-.btn-icon {
-  width: 40px;
-  height: 40px;
-  border: none;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(10px);
-  color: white;
-  font-size: 18px;
-  cursor: pointer;
-  transition: transform 0.2s, background 0.2s;
-}
-
-.btn-icon:hover {
-  transform: scale(1.1);
-  background: rgba(255, 255, 255, 0.3);
-}
-
-.btn-danger:hover {
-  background: rgba(255, 59, 48, 0.3);
 }
 </style>

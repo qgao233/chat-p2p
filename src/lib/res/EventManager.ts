@@ -85,12 +85,22 @@ export class EventManager {
   }
 
   /**
-   * 触发所有流事件处理程序
+   * 触发流事件处理程序
+   * 根据 metadata.type 触发对应 hookType 的处理程序
    */
   triggerPeerStream = (stream: MediaStream, peerId: string, metadata?: any) => {
-    this.peerStreamHandlers.forEach((handlers) => {
-      handlers.forEach(handler => handler(stream, peerId, metadata))
-    })
+    // 如果有 metadata.type，只触发对应类型的处理程序
+    if (metadata?.type) {
+      const handlers = this.peerStreamHandlers.get(metadata.type)
+      if (handlers) {
+        handlers.forEach(handler => handler(stream, peerId, metadata))
+      }
+    } else {
+      // 如果没有 metadata.type，触发所有处理程序（向后兼容）
+      this.peerStreamHandlers.forEach((handlers) => {
+        handlers.forEach(handler => handler(stream, peerId, metadata))
+      })
+    }
   }
 
   /**

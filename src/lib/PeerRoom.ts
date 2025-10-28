@@ -19,7 +19,6 @@ import { StreamManager } from './res/StreamManager'
 import { ConnectionManager } from './res/ConnectionManager'
 import { 
   PeerVerificationManager,
-  type VerificationConfig,
   type PeerVerificationMetadata,
   PeerVerificationState
 } from './res/PeerVerificationManager'

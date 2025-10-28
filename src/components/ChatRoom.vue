@@ -7,9 +7,17 @@
         <span class="room-id">房间: {{ roomId }}</span>
         <span class="online-count">在线: {{ peers.length + 1 }}</span>
       </div>
+      <div class="header-actions">
+        <button class="btn-icon" @click="copyRoomLink" title="复制房间链接">
+          📋
+        </button>
+        <button class="btn-icon btn-danger" @click="handleLeaveRoom" title="离开房间">
+          🚪
+        </button>
+      </div>
     </div>
 
-    <!-- 侧边栏 - 用户列表 -->
+    <!-- 左侧边栏 - 用户列表 -->
     <div class="chat-sidebar">
       <div class="user-list">
         <h3>在线用户</h3>
@@ -68,15 +76,25 @@
         </button>
       </div>
     </div>
+
+    <!-- 右侧边栏 - 媒体控制 -->
+    <div class="media-sidebar">
+      <MediaControls :media="media" />
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, nextTick, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoom } from '../composables/useRoom'
+import MediaControls from './MediaControls.vue'
 
 const props = defineProps<{
   roomId: string
+}>()
+
+const emit = defineEmits<{
+  leave: []
 }>()
 
 const {
@@ -88,6 +106,7 @@ const {
   joinRoom,
   sendChatMessage,
   leaveRoom,
+  media,
 } = useRoom(props.roomId)
 
 const messageText = ref('')
@@ -133,12 +152,26 @@ const scrollToBottom = () => {
 watch(messages, () => {
   scrollToBottom()
 })
+
+// 复制房间链接
+const copyRoomLink = () => {
+  const url = new URL(window.location.href)
+  url.searchParams.set('room', props.roomId)
+  navigator.clipboard.writeText(url.toString())
+  alert('房间链接已复制！')
+}
+
+// 离开房间
+const handleLeaveRoom = () => {
+  leaveRoom()
+  emit('leave')
+}
 </script>
 
 <style scoped>
 .chat-room {
   display: grid;
-  grid-template-columns: 250px 1fr;
+  grid-template-columns: 250px 1fr 80px;
   grid-template-rows: 60px 1fr;
   height: 100vh;
   background: #f5f5f5;
@@ -153,11 +186,41 @@ watch(messages, () => {
   justify-content: space-between;
   align-items: center;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  gap: 20px;
 }
 
 .chat-header h2 {
   margin: 0;
   font-size: 20px;
+  flex-shrink: 0;
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.btn-icon {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  color: white;
+  font-size: 18px;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.btn-icon:hover {
+  transform: scale(1.1);
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.btn-danger:hover {
+  background: rgba(255, 59, 48, 0.3);
 }
 
 .room-info {
@@ -184,6 +247,12 @@ watch(messages, () => {
 
 .user-list {
   padding: 20px;
+}
+
+.media-sidebar {
+  background: white;
+  border-left: 1px solid #e0e0e0;
+  overflow: hidden;
 }
 
 .user-list h3 {

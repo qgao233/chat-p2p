@@ -163,7 +163,7 @@ export class PeerVerificationManager {
   initiateVerification = async (
     peerId: string,
     publicKey: CryptoKey,
-    privateKey: CryptoKey
+    _privateKey: CryptoKey
   ): Promise<void> => {
     this.initialize()  // 确保已初始化
     

@@ -15,6 +15,7 @@ import {
 import type { Message, UserMetadata } from '../lib'
 import { encryption } from '../services/encryption'
 import { rtcConfig } from '../config/rtc'
+import { useMedia } from './useMedia'
 
 interface Peer {
   peerId: string
@@ -39,6 +40,12 @@ export const useRoom = (roomId: string) => {
   let peerRoom: PeerRoom | null = null
   let sendMessage: ((msg: Message, peerId?: string) => void) | null = null
   let sendMetadata: ((data: UserMetadata, peerId?: string) => void) | null = null
+
+  // 创建 peerRoom 的 ref 用于 useMedia
+  const peerRoomRef = computed(() => peerRoom)
+  
+  // 媒体管理
+  const media = useMedia(peerRoomRef)
 
   // 计算属性 - 验证统计
   const verifiedPeersCount = computed(() => 
@@ -128,7 +135,7 @@ export const useRoom = (roomId: string) => {
     // 设置消息通道
     const messageAction = peerRoom.createMessageAction()
     sendMessage = messageAction.sendMessage
-    messageAction.onMessage((message, peerId) => {
+    messageAction.onMessage((message) => {
       messages.value.push(message)
     })
 
@@ -211,6 +218,9 @@ export const useRoom = (roomId: string) => {
     })
 
     isConnected.value = true
+
+    // 初始化媒体监听器
+    media.initializeMediaListeners()
 
     // 定期更新连接类型和验证状态
     const updateConnectionTypes = async () => {
@@ -345,6 +355,10 @@ export const useRoom = (roomId: string) => {
    */
   const leaveRoom = () => {
     console.log('[useRoom] 离开房间')
+    
+    // 清理媒体资源
+    media.cleanup()
+    
     if (peerRoom) {
       try {
         peerRoom.leave()
@@ -395,6 +409,9 @@ export const useRoom = (roomId: string) => {
     getVerificationState,
     isVerified,
     updatePeerVerificationState,
+    
+    // 媒体功能
+    media,
   }
 }
 
