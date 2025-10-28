@@ -6,13 +6,14 @@
 import type {
   TrysteroRoom,
   ActionNamespace,
-  PeerAction,
   PeerActionTuple,
   Message,
   UserMetadata,
   TypingStatus,
   MediaMessage
 } from './types'
+
+import { PeerAction } from './types'
 
 export class ActionManager {
   private actions: Map<string, PeerActionTuple> = new Map()
