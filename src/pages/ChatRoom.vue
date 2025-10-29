@@ -20,34 +20,14 @@
     <!-- 网格布局内容区 -->
     <div class="chat-content">
       <GridLayout :rows="1" :columns="3" :gap="0">
-        <!-- cell-0: 左侧边栏 - 用户列表 -->
+        <!-- cell-0: 左侧边栏 - 用户网格 -->
         <template #cell-0>
-          <div class="sidebar-content">
-            <div class="user-list">
-              <h3>在线用户</h3>
-              <!-- 自己 -->
-              <div class="user-item me">
-                <div class="user-avatar">👤</div>
-                <div class="user-info">
-                  <div class="username">{{ currentUsername }} (你)</div>
-                  <div class="user-id">{{ currentUserId.slice(0, 8) }}</div>
-                </div>
-              </div>
-              <!-- 其他用户 -->
-              <div v-for="peer in peers" :key="peer.peerId" class="user-item">
-                <div class="user-avatar">👥</div>
-                <div class="user-info">
-                  <div class="username">
-                    {{ peer.username }}
-                    <span v-if="peer.connectionType" class="connection-badge" :class="peer.connectionType">
-                      {{ peer.connectionType === 'DIRECT' ? '🔗' : '🔄' }}
-                    </span>
-                  </div>
-                  <div class="user-id">{{ peer.userId.slice(0, 8) }}</div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <UserGrid
+            :media="media"
+            :peers="peers"
+            :current-user-id="currentUserId"
+            :current-username="currentUsername"
+          />
         </template>
 
         <!-- cell-1: 中间内容区 - 消息列表 -->
@@ -100,6 +80,7 @@ import { ref, nextTick, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoom } from '../composables/useRoom'
 import MediaControls from '../components/MediaControls.vue'
 import GridLayout from '../components/GridLayout.vue'
+import UserGrid from '../components/UserGrid.vue'
 
 const props = defineProps<{
   roomId: string
@@ -269,68 +250,6 @@ const handleLeaveRoom = () => {
   background: white;
   display: flex;
   flex-direction: column;
-}
-
-/* 用户列表样式 */
-.user-list {
-  padding: 20px;
-}
-
-.user-list h3 {
-  margin: 0 0 15px 0;
-  font-size: 14px;
-  color: #666;
-  text-transform: uppercase;
-}
-
-.user-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px;
-  margin-bottom: 8px;
-  border-radius: 8px;
-  background: #f8f8f8;
-}
-
-.user-item.me {
-  background: linear-gradient(135deg, #667eea22 0%, #764ba222 100%);
-  border: 1px solid #667eea44;
-}
-
-.user-avatar {
-  font-size: 24px;
-}
-
-.user-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.username {
-  font-weight: 600;
-  font-size: 14px;
-  color: #333;
-}
-
-.user-id {
-  font-size: 12px;
-  color: #999;
-  font-family: monospace;
-}
-
-.connection-badge {
-  font-size: 10px;
-  margin-left: 4px;
-  opacity: 0.7;
-}
-
-.connection-badge.DIRECT {
-  opacity: 1;
-}
-
-.connection-badge.RELAY {
-  opacity: 0.6;
 }
 
 /* 消息列表样式 */

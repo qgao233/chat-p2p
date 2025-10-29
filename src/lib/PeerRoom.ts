@@ -31,7 +31,7 @@ import type {
   PeerLeaveHandler,
   PeerStreamHandler,
   PeerConnectionType,
-  PeerStreamType
+  StreamType
 } from './types'
 
 import {
@@ -267,7 +267,7 @@ export class PeerRoom {
   addStream = (
     stream: MediaStream,
     targetPeers?: string[],
-    metadata?: { type: PeerStreamType }
+    metadata?: { type: StreamType }
   ) => {
     this.streamManager.addStream(stream, targetPeers, metadata)
   }

@@ -59,30 +59,8 @@ export enum PeerVerificationState {
   UNVERIFIED = 'UNVERIFIED',   // 验证失败或超时
 }
 
-/**
- * 流类型
- */
-export enum StreamType {
-  WEBCAM = 'WEBCAM',            // 摄像头
-  MICROPHONE = 'MICROPHONE',    // 麦克风
-  SCREEN_SHARE = 'SCREEN_SHARE', // 屏幕共享
-}
 
-
-export enum AudioChannelName{
-  MICROPHONE = 'MICROPHONE',    // 麦克风
-  SYSTEM_AUDIO_IN_SCREEN_SHARE = 'SYSTEM_AUDIO_IN_SCREEN_SHARE', // 屏幕共享中的系统音频
-}
-
-/**
- * 对等方流类型
- */
-export enum PeerStreamType {
-  AUDIO = 'AUDIO',
-  VIDEO = 'VIDEO',
-  SCREEN = 'SCREEN',
-}
-
+//================================
 /**
  * 对等方事件钩子类型
  * 用于区分不同类型的连接事件处理程序
@@ -94,6 +72,44 @@ export enum PeerHookType {
   SCREEN = 'SCREEN',               // 屏幕共享事件
   FILE_SHARE = 'FILE_SHARE',       // 文件传输事件
 }
+
+/**
+ * 流类型
+ */
+export enum StreamType {
+  WEBCAM = 'WEBCAM',            // 摄像头
+  MICROPHONE = 'MICROPHONE',    // 麦克风
+  SCREEN_SHARE = 'SCREEN_SHARE', // 屏幕共享
+  SYSTEM_AUDIO_IN_SCREEN_SHARE = 'SYSTEM_AUDIO_IN_SCREEN_SHARE', // 屏幕共享中的系统音频
+}
+
+export const StreamTypeMap: Partial<Record<StreamType, StreamType[]>> = {
+  [StreamType.SCREEN_SHARE]: [
+    StreamType.SCREEN_SHARE, 
+    StreamType.SYSTEM_AUDIO_IN_SCREEN_SHARE
+  ],
+}
+
+export const HookStreamMap: Partial<Record<PeerHookType, StreamType[]>> = {
+  [PeerHookType.AUDIO]: [StreamType.MICROPHONE],
+  [PeerHookType.VIDEO]: [StreamType.MICROPHONE,StreamType.WEBCAM],
+  [PeerHookType.SCREEN]: [StreamType.MICROPHONE,StreamType.SCREEN_SHARE],
+}
+
+//================================
+
+//需要控制声音的2种类型
+export enum AudioChannelName{
+  MICROPHONE = 'MICROPHONE',    // 麦克风
+  SYSTEM_AUDIO_IN_SCREEN_SHARE = 'SYSTEM_AUDIO_IN_SCREEN_SHARE', // 屏幕共享中的系统音频
+}
+
+export const StreamAudioMap: Partial<Record<StreamType, AudioChannelName[]>> = {
+  [StreamType.MICROPHONE]: [AudioChannelName.MICROPHONE],
+  [StreamType.SCREEN_SHARE]: [AudioChannelName.MICROPHONE, AudioChannelName.SYSTEM_AUDIO_IN_SCREEN_SHARE],
+}
+
+//================================
 
 /**
  * 房间配置

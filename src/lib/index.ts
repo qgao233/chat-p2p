@@ -38,8 +38,15 @@ export type {
 export {
   ActionNamespace,
   PeerAction,
-  PeerStreamType,
+
   PeerHookType,
+  StreamType,
+  StreamTypeMap,
+  HookStreamMap,
+
+  AudioChannelName,
+  StreamAudioMap,
+
   PeerConnectionType as PeerConnectionTypeEnum,
   PeerVerificationState
 } from './types'
