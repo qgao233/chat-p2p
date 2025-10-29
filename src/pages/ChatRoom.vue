@@ -17,69 +17,80 @@
       </div>
     </div>
 
-    <!-- 左侧边栏 - 用户列表 -->
-    <div class="chat-sidebar">
-      <div class="user-list">
-        <h3>在线用户</h3>
-        <!-- 自己 -->
-        <div class="user-item me">
-          <div class="user-avatar">👤</div>
-          <div class="user-info">
-            <div class="username">{{ currentUsername }} (你)</div>
-            <div class="user-id">{{ currentUserId.slice(0, 8) }}</div>
-          </div>
-        </div>
-        <!-- 其他用户 -->
-        <div v-for="peer in peers" :key="peer.peerId" class="user-item">
-          <div class="user-avatar">👥</div>
-          <div class="user-info">
-            <div class="username">
-              {{ peer.username }}
-              <span v-if="peer.connectionType" class="connection-badge" :class="peer.connectionType">
-                {{ peer.connectionType === 'DIRECT' ? '🔗' : '🔄' }}
-              </span>
+    <!-- 网格布局内容区 -->
+    <div class="chat-content">
+      <GridLayout :rows="1" :columns="3" :gap="0">
+        <!-- cell-0: 左侧边栏 - 用户列表 -->
+        <template #cell-0>
+          <div class="sidebar-content">
+            <div class="user-list">
+              <h3>在线用户</h3>
+              <!-- 自己 -->
+              <div class="user-item me">
+                <div class="user-avatar">👤</div>
+                <div class="user-info">
+                  <div class="username">{{ currentUsername }} (你)</div>
+                  <div class="user-id">{{ currentUserId.slice(0, 8) }}</div>
+                </div>
+              </div>
+              <!-- 其他用户 -->
+              <div v-for="peer in peers" :key="peer.peerId" class="user-item">
+                <div class="user-avatar">👥</div>
+                <div class="user-info">
+                  <div class="username">
+                    {{ peer.username }}
+                    <span v-if="peer.connectionType" class="connection-badge" :class="peer.connectionType">
+                      {{ peer.connectionType === 'DIRECT' ? '🔗' : '🔄' }}
+                    </span>
+                  </div>
+                  <div class="user-id">{{ peer.userId.slice(0, 8) }}</div>
+                </div>
+              </div>
             </div>
-            <div class="user-id">{{ peer.userId.slice(0, 8) }}</div>
           </div>
-        </div>
-      </div>
-    </div>
+        </template>
 
-    <!-- 主要内容区 -->
-    <div class="chat-main">
-      <!-- 消息列表 -->
-      <div class="messages" ref="messagesContainer">
-        <div
-          v-for="msg in messages"
-          :key="msg.id"
-          :class="['message', msg.userId === currentUserId ? 'message-own' : 'message-peer']"
-        >
-          <div class="message-header">
-            <span class="message-username">{{ msg.username }}</span>
-            <span class="message-time">{{ formatTime(msg.timestamp) }}</span>
+        <!-- cell-1: 中间内容区 - 消息列表 -->
+        <template #cell-1>
+          <div class="main-content">
+            <!-- 消息列表 -->
+            <div class="messages" ref="messagesContainer">
+              <div
+                v-for="msg in messages"
+                :key="msg.id"
+                :class="['message', msg.userId === currentUserId ? 'message-own' : 'message-peer']"
+              >
+                <div class="message-header">
+                  <span class="message-username">{{ msg.username }}</span>
+                  <span class="message-time">{{ formatTime(msg.timestamp) }}</span>
+                </div>
+                <div class="message-content">{{ msg.text }}</div>
+              </div>
+            </div>
+
+            <!-- 输入框 -->
+            <div class="message-input">
+              <input
+                v-model="messageText"
+                @keyup.enter="handleSend"
+                type="text"
+                placeholder="输入消息... (按 Enter 发送)"
+                :disabled="!isConnected"
+              />
+              <button @click="handleSend" :disabled="!isConnected || !messageText.trim()">
+                发送
+              </button>
+            </div>
           </div>
-          <div class="message-content">{{ msg.text }}</div>
-        </div>
-      </div>
+        </template>
 
-      <!-- 输入框 -->
-      <div class="message-input">
-        <input
-          v-model="messageText"
-          @keyup.enter="handleSend"
-          type="text"
-          placeholder="输入消息... (按 Enter 发送)"
-          :disabled="!isConnected"
-        />
-        <button @click="handleSend" :disabled="!isConnected || !messageText.trim()">
-          发送
-        </button>
-      </div>
-    </div>
-
-    <!-- 右侧边栏 - 媒体控制 -->
-    <div class="media-sidebar">
-      <MediaControls :media="media" />
+        <!-- cell-2: 右侧边栏 - 媒体控制 -->
+        <template #cell-2>
+          <div class="sidebar-content">
+            <MediaControls :media="media" />
+          </div>
+        </template>
+      </GridLayout>
     </div>
   </div>
 </template>
@@ -87,7 +98,8 @@
 <script setup lang="ts">
 import { ref, nextTick, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRoom } from '../composables/useRoom'
-import MediaControls from './MediaControls.vue'
+import MediaControls from '../components/MediaControls.vue'
+import GridLayout from '../components/GridLayout.vue'
 
 const props = defineProps<{
   roomId: string
@@ -170,23 +182,24 @@ const handleLeaveRoom = () => {
 
 <style scoped>
 .chat-room {
-  display: grid;
-  grid-template-columns: 250px 1fr 80px;
-  grid-template-rows: 60px 1fr;
+  display: flex;
+  flex-direction: column;
   height: 100vh;
   background: #f5f5f5;
 }
 
 .chat-header {
-  grid-column: 1 / -1;
+  flex-shrink: 0;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   padding: 0 20px;
+  height: 60px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   gap: 20px;
+  z-index: 10;
 }
 
 .chat-header h2 {
@@ -239,20 +252,28 @@ const handleLeaveRoom = () => {
   border-radius: 12px;
 }
 
-.chat-sidebar {
+.chat-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* 侧边栏和主内容区样式 */
+.sidebar-content {
+  height: 100%;
   background: white;
-  border-right: 1px solid #e0e0e0;
   overflow-y: auto;
 }
 
-.user-list {
-  padding: 20px;
+.main-content {
+  height: 100%;
+  background: white;
+  display: flex;
+  flex-direction: column;
 }
 
-.media-sidebar {
-  background: white;
-  border-left: 1px solid #e0e0e0;
-  overflow: hidden;
+/* 用户列表样式 */
+.user-list {
+  padding: 20px;
 }
 
 .user-list h3 {
@@ -312,12 +333,7 @@ const handleLeaveRoom = () => {
   opacity: 0.6;
 }
 
-.chat-main {
-  display: flex;
-  flex-direction: column;
-  background: white;
-}
-
+/* 消息列表样式 */
 .messages {
   flex: 1;
   overflow-y: auto;
@@ -389,6 +405,7 @@ const handleLeaveRoom = () => {
 }
 
 .message-input {
+  flex-shrink: 0;
   display: flex;
   gap: 10px;
   padding: 20px;

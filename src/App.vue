@@ -1,54 +1,3 @@
-<script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { v4 as uuid } from 'uuid'
-import ChatRoom from './components/ChatRoom.vue'
-
-const roomId = ref('')
-const isInRoom = ref(false)
-const customRoomId = ref('')
-
-// 从 URL 获取房间 ID 或生成新的
-onMounted(() => {
-  const urlParams = new URLSearchParams(window.location.search)
-  const urlRoomId = urlParams.get('room')
-  
-  if (urlRoomId) {
-    roomId.value = urlRoomId
-    isInRoom.value = true
-  }
-})
-
-// 创建新房间
-const createRoom = () => {
-  const newRoomId = uuid()
-  roomId.value = newRoomId
-  updateUrl(newRoomId)
-  isInRoom.value = true
-}
-
-// 加入指定房间
-const joinRoom = () => {
-  if (customRoomId.value.trim()) {
-    roomId.value = customRoomId.value.trim()
-    updateUrl(roomId.value)
-    isInRoom.value = true
-  }
-}
-
-// 更新 URL
-const updateUrl = (id: string) => {
-  const url = new URL(window.location.href)
-  url.searchParams.set('room', id)
-  window.history.pushState({}, '', url.toString())
-}
-
-// 离开房间
-const leaveRoom = () => {
-  isInRoom.value = false
-  roomId.value = ''
-  window.history.pushState({}, '', window.location.pathname)
-}
-</script>
 
 <template>
   <div class="app">
@@ -114,6 +63,58 @@ const leaveRoom = () => {
     </div>
   </div>
 </template>
+
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { v4 as uuid } from 'uuid'
+import ChatRoom from './pages/ChatRoom.vue'
+
+const roomId = ref('')
+const isInRoom = ref(false)
+const customRoomId = ref('')
+
+// 从 URL 获取房间 ID 或生成新的
+onMounted(() => {
+  const urlParams = new URLSearchParams(window.location.search)
+  const urlRoomId = urlParams.get('room')
+  
+  if (urlRoomId) {
+    roomId.value = urlRoomId
+    isInRoom.value = true
+  }
+})
+
+// 创建新房间
+const createRoom = () => {
+  const newRoomId = uuid()
+  roomId.value = newRoomId
+  updateUrl(newRoomId)
+  isInRoom.value = true
+}
+
+// 加入指定房间
+const joinRoom = () => {
+  if (customRoomId.value.trim()) {
+    roomId.value = customRoomId.value.trim()
+    updateUrl(roomId.value)
+    isInRoom.value = true
+  }
+}
+
+// 更新 URL
+const updateUrl = (id: string) => {
+  const url = new URL(window.location.href)
+  url.searchParams.set('room', id)
+  window.history.pushState({}, '', url.toString())
+}
+
+// 离开房间
+const leaveRoom = () => {
+  isInRoom.value = false
+  roomId.value = ''
+  window.history.pushState({}, '', window.location.pathname)
+}
+</script>
 
 <style>
 * {
