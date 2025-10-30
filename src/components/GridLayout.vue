@@ -48,18 +48,36 @@
   </template>
   
   <script setup lang="ts">
-  import { ref, computed, onMounted, onUnmounted } from 'vue'
+  import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+  
+  interface CellSize {
+    /** 单元格索引 (0-based) */
+    cellIndex: number
+    /** 宽度比例 (0-1) 或像素值 */
+    width?: number | string
+    /** 高度比例 (0-1) 或像素值 */
+    height?: number | string
+  }
   
   interface Props {
     rows?: number
     columns?: number
     gap?: number
+    /** 单元格初始尺寸配置 */
+    cellSizes?: CellSize[]
+    /** 默认列宽比例数组 */
+    defaultColumnRatios?: number[]
+    /** 默认行高比例数组 */
+    defaultRowRatios?: number[]
   }
   
   const props = withDefaults(defineProps<Props>(), {
     rows: 2,
     columns: 2,
-    gap: 8
+    gap: 8,
+    cellSizes: () => [],
+    defaultColumnRatios: () => [],
+    defaultRowRatios: () => []
   })
   
   const containerRef = ref<HTMLElement | null>(null)
@@ -81,11 +99,154 @@
     startRatios: number[]
   } | null>(null)
   
-  // 初始化比例
+  /**
+   * 将单元格索引转换为行列坐标
+   */
+  const getCellPosition = (cellIndex: number): { row: number; col: number } => {
+    const row = Math.floor(cellIndex / props.columns)
+    const col = cellIndex % props.columns
+    return { row, col }
+  }
+  
+  /**
+   * 解析尺寸值（支持比例和像素）
+   */
+  const parseSizeValue = (value: number | string | undefined, defaultValue: number): number => {
+    if (value === undefined) return defaultValue
+    
+    if (typeof value === 'number') {
+      // 如果是 0-1 之间的数字，视为比例
+      if (value > 0 && value <= 1) {
+        return value
+      }
+      // 否则视为像素值，需要转换为比例（在初始化时处理）
+      return value
+    }
+    
+    // 字符串类型，解析百分比或像素
+    if (typeof value === 'string') {
+      if (value.endsWith('%')) {
+        return parseFloat(value) / 100
+      }
+      if (value.endsWith('px')) {
+        return parseFloat(value)
+      }
+      return parseFloat(value)
+    }
+    
+    return defaultValue
+  }
+  
+  /**
+   * 初始化比例
+   * 支持从 cellSizes 或 defaultColumnRatios/defaultRowRatios 配置初始尺寸
+   */
   const initializeRatios = () => {
-    // 平均分配每列和每行
-    columnRatios.value = Array(props.columns).fill(1 / props.columns)
-    rowRatios.value = Array(props.rows).fill(1 / props.rows)
+    // 初始化列宽比例
+    if (props.defaultColumnRatios.length === props.columns) {
+      // 使用提供的默认列宽
+      columnRatios.value = [...props.defaultColumnRatios]
+    } else {
+      // 平均分配
+      columnRatios.value = Array(props.columns).fill(1 / props.columns)
+    }
+    
+    // 初始化行高比例
+    if (props.defaultRowRatios.length === props.rows) {
+      // 使用提供的默认行高
+      rowRatios.value = [...props.defaultRowRatios]
+    } else {
+      // 平均分配
+      rowRatios.value = Array(props.rows).fill(1 / props.rows)
+    }
+    
+    // 根据 cellSizes 配置调整特定单元格的尺寸
+    if (props.cellSizes.length > 0) {
+      applyCellSizes()
+    }
+  }
+  
+  /**
+   * 应用单元格尺寸配置
+   */
+  const applyCellSizes = () => {
+    // 收集每列和每行的尺寸配置
+    const columnSizeMap = new Map<number, number>()
+    const rowSizeMap = new Map<number, number>()
+    
+    props.cellSizes.forEach(cellSize => {
+      const { row, col } = getCellPosition(cellSize.cellIndex)
+      
+      if (cellSize.width !== undefined) {
+        const width = parseSizeValue(cellSize.width, 1 / props.columns)
+        // 如果同一列有多个配置，取平均值
+        const existing = columnSizeMap.get(col)
+        columnSizeMap.set(col, existing ? (existing + width) / 2 : width)
+      }
+      
+      if (cellSize.height !== undefined) {
+        const height = parseSizeValue(cellSize.height, 1 / props.rows)
+        // 如果同一行有多个配置，取平均值
+        const existing = rowSizeMap.get(row)
+        rowSizeMap.set(row, existing ? (existing + height) / 2 : height)
+      }
+    })
+    
+    // 应用列宽配置
+    if (columnSizeMap.size > 0) {
+      const newColumnRatios = [...columnRatios.value]
+      let totalConfigured = 0
+      let configuredCount = 0
+      
+      columnSizeMap.forEach((ratio, col) => {
+        newColumnRatios[col] = ratio
+        totalConfigured += ratio
+        configuredCount++
+      })
+      
+      // 调整未配置的列，使总和为 1
+      const remaining = 1 - totalConfigured
+      const unconfiguredCount = props.columns - configuredCount
+      
+      if (unconfiguredCount > 0 && remaining > 0) {
+        const avgRemaining = remaining / unconfiguredCount
+        for (let i = 0; i < props.columns; i++) {
+          if (!columnSizeMap.has(i)) {
+            newColumnRatios[i] = avgRemaining
+          }
+        }
+      }
+      
+      columnRatios.value = newColumnRatios
+    }
+    
+    // 应用行高配置
+    if (rowSizeMap.size > 0) {
+      const newRowRatios = [...rowRatios.value]
+      let totalConfigured = 0
+      let configuredCount = 0
+      
+      rowSizeMap.forEach((ratio, row) => {
+        newRowRatios[row] = ratio
+        totalConfigured += ratio
+        configuredCount++
+      })
+      
+      // 调整未配置的行，使总和为 1
+      const remaining = 1 - totalConfigured
+      const unconfiguredCount = props.rows - configuredCount
+      
+      if (unconfiguredCount > 0 && remaining > 0) {
+        const avgRemaining = remaining / unconfiguredCount
+        for (let i = 0; i < props.rows; i++) {
+          if (!rowSizeMap.has(i)) {
+            newRowRatios[i] = avgRemaining
+          }
+        }
+      }
+      
+      rowRatios.value = newRowRatios
+    }
   }
   
   // 计算实际的列宽和行高（CSS grid template values）
@@ -216,6 +377,15 @@
   // ResizeObserver 监听容器尺寸变化
   let resizeObserver: ResizeObserver | null = null
   
+  // 监听 props 变化，重新初始化
+  watch(
+    () => [props.rows, props.columns, props.cellSizes, props.defaultColumnRatios, props.defaultRowRatios],
+    () => {
+      initializeRatios()
+    },
+    { deep: true }
+  )
+  
   onMounted(() => {
     initializeRatios()
     updateContainerSize()
@@ -238,6 +408,28 @@
     if (resizeObserver && containerRef.value) {
       resizeObserver.unobserve(containerRef.value)
       resizeObserver.disconnect()
+    }
+  })
+  
+  // 导出方法供外部使用
+  defineExpose({
+    /** 重置为初始尺寸 */
+    resetSizes: initializeRatios,
+    /** 获取当前列宽比例 */
+    getColumnRatios: () => [...columnRatios.value],
+    /** 获取当前行高比例 */
+    getRowRatios: () => [...rowRatios.value],
+    /** 设置列宽比例 */
+    setColumnRatios: (ratios: number[]) => {
+      if (ratios.length === props.columns) {
+        columnRatios.value = [...ratios]
+      }
+    },
+    /** 设置行高比例 */
+    setRowRatios: (ratios: number[]) => {
+      if (ratios.length === props.rows) {
+        rowRatios.value = [...ratios]
+      }
     }
   })
   </script>

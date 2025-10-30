@@ -43,8 +43,13 @@
 
     <!-- 网格布局内容区 -->
     <div class="chat-content">
-      <GridLayout :rows="1" :columns="3" :gap="0">
-        <!-- cell-0: 左侧边栏 - 用户网格 -->
+      <GridLayout 
+        :rows="1" 
+        :columns="3" 
+        :gap="0"
+        :default-column-ratios="[0.2, 0.75, 0.05]"
+      >
+        <!-- cell-0: 左侧边栏 - 用户网格 (25%) -->
         <template #cell-0>
           <UserGrid
             :media="media"
@@ -54,7 +59,7 @@
           />
         </template>
 
-        <!-- cell-1: 中间内容区 - 消息列表 -->
+        <!-- cell-1: 中间内容区 - 消息列表 (50%) -->
         <template #cell-1>
           <div class="main-content">
             <!-- 消息列表 -->
@@ -88,7 +93,7 @@
           </div>
         </template>
 
-        <!-- cell-2: 右侧边栏 - 媒体控制 -->
+        <!-- cell-2: 右侧边栏 - 媒体控制 (25%) -->
         <template #cell-2>
           <MediaControls :media="media" :user-name="currentUsername" />
         </template>
