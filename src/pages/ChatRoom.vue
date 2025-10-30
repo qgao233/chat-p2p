@@ -20,6 +20,13 @@
       </div>
     </div>
 
+    <!-- 复制成功提示 -->
+    <Transition name="toast">
+      <div v-if="showCopyToast" class="toast">
+        ✅ 房间号已复制到剪贴板
+      </div>
+    </Transition>
+
     <!-- 修改用户名对话框 -->
     <div v-if="showUsernameDialog" class="dialog-overlay" @click="showUsernameDialog = false">
       <div class="dialog-content" @click.stop>
@@ -116,6 +123,7 @@ const {
 const showUsernameDialog = ref(false)
 const newUsername = ref('')
 const usernameInput = ref<HTMLInputElement | null>(null)
+const showCopyToast = ref(false)
 
 // 组件挂载时加入房间
 onMounted(() => {
@@ -155,9 +163,16 @@ const handleFileDownload = async (fileId: string) => {
 }
 
 // 复制房间号
-const copyRoomLink = () => {
-  navigator.clipboard.writeText(props.roomId)
-  alert('房间号已复制！')
+const copyRoomLink = async () => {
+  try {
+    await navigator.clipboard.writeText(props.roomId)
+    showCopyToast.value = true
+    setTimeout(() => {
+      showCopyToast.value = false
+    }, 2000)
+  } catch (error) {
+    console.error('复制失败:', error)
+  }
 }
 
 // 离开房间
@@ -397,6 +412,57 @@ watch(showUsernameDialog, async (show) => {
 
 .btn-secondary:hover {
   background: #e0e0e0;
+}
+
+/* Toast 提示样式 */
+.toast {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Toast 动画 */
+.toast-enter-active {
+  animation: toastIn 0.3s ease;
+}
+
+.toast-leave-active {
+  animation: toastOut 0.3s ease;
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes toastOut {
+  from {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
 }
 </style>
 
