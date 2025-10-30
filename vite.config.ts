@@ -49,5 +49,5 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['bittorrent-dht'],
   },
-  base: './'//找资源
+  base: '/chat-p2p/'//找资源
 })
