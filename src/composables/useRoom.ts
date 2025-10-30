@@ -10,7 +10,8 @@ import {
   PeerRoom, 
   PeerConnectionTypeEnum as PeerConnectionType, 
   PeerHookType,
-  PeerVerificationStateEnum as PeerVerificationState
+  PeerVerificationStateEnum as PeerVerificationState,
+  generateDefaultUsername
 } from '../lib'
 import type { Message, UserMetadata } from '../lib'
 import { encryption } from '../services/encryption'
@@ -97,7 +98,7 @@ export const useRoom = (roomId: string) => {
 
       // 加载或生成用户名
       const storedUsername = await localforage.getItem<string>('username')
-      currentUsername.value = storedUsername || `User_${currentUserId.value.slice(0, 4)}`
+      currentUsername.value = storedUsername || generateDefaultUsername(currentUserId.value)
       
       if (!storedUsername) {
         await localforage.setItem('username', currentUsername.value)

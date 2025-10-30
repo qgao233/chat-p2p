@@ -1,88 +1,255 @@
 <template>
-  <div class="media-controls-compact">
-    <!-- 媒体控制按钮 -->
-    <div class="control-buttons-vertical">
+  <div class="media-controls" :class="callModeClass">
+    <!-- 顶部控制栏 -->
+    <div v-if="isInCall" class="top-controls">
       <button 
         @click="toggleAudio" 
-        :class="['media-btn', { active: media.mediaState.value.isAudioEnabled }]"
-        :title="media.mediaState.value.isAudioEnabled ? '停止音频通话' : '开始音频通话'"
+        :class="['control-btn', { active: media.mediaState.value.isAudioEnabled }]"
+        :title="media.mediaState.value.isAudioEnabled ? '关闭麦克风' : '开启麦克风'"
       >
-        {{ media.mediaState.value.isAudioEnabled ? '🎤' : '🔇' }}
+        <svg v-if="media.mediaState.value.isAudioEnabled" class="icon" viewBox="0 0 24 24">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+          <line x1="12" y1="19" x2="12" y2="23"/>
+          <line x1="8" y1="23" x2="16" y2="23"/>
+        </svg>
+        <svg v-else class="icon" viewBox="0 0 24 24">
+          <line x1="1" y1="1" x2="23" y2="23"/>
+          <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/>
+          <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/>
+          <line x1="12" y1="19" x2="12" y2="23"/>
+          <line x1="8" y1="23" x2="16" y2="23"/>
+        </svg>
       </button>
 
       <button 
         @click="toggleVideo" 
-        :class="['media-btn', { active: media.mediaState.value.isVideoEnabled }]"
-        :title="media.mediaState.value.isVideoEnabled ? '停止视频通话' : '开始视频通话'"
+        :class="['control-btn', { active: media.mediaState.value.isVideoEnabled }]"
+        :title="media.mediaState.value.isVideoEnabled ? '关闭摄像头' : '开启摄像头'"
       >
-        {{ media.mediaState.value.isVideoEnabled ? '📹' : '📷' }}
+        <svg v-if="media.mediaState.value.isVideoEnabled" class="icon" viewBox="0 0 24 24">
+          <polygon points="23 7 16 12 23 17 23 7"/>
+          <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+        </svg>
+        <svg v-else class="icon" viewBox="0 0 24 24">
+          <line x1="1" y1="1" x2="23" y2="23"/>
+          <path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10"/>
+        </svg>
       </button>
 
       <button 
         @click="toggleScreen" 
-        :class="['media-btn', { active: media.mediaState.value.isScreenSharing }]"
+        :class="['control-btn', { active: media.mediaState.value.isScreenSharing }]"
         :title="media.mediaState.value.isScreenSharing ? '停止屏幕共享' : '开始屏幕共享'"
       >
-        {{ media.mediaState.value.isScreenSharing ? '🖥️' : '💻' }}
+        <svg class="icon" viewBox="0 0 24 24">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+        </svg>
       </button>
     </div>
 
-    <!-- 媒体流显示区域 -->
-    <div v-if="hasActiveMedia" class="media-streams">
-      <!-- 本地视频预览 -->
-      <div v-if="media.localVideoStream.value" class="stream-preview">
-        <div class="stream-label">本地视频</div>
+    <!-- 主显示区域 -->
+    <div class="main-display">
+      <!-- 空闲状态 -->
+      <div v-if="callMode === 'idle'" class="idle-state">
+        <button @click="toggleAudio" class="idle-btn" title="音频通话">
+          <svg class="icon" viewBox="0 0 24 24">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="23"/>
+            <line x1="8" y1="23" x2="16" y2="23"/>
+          </svg>
+        </button>
+
+        <button @click="toggleVideo" class="idle-btn" title="视频通话">
+          <svg class="icon" viewBox="0 0 24 24">
+            <polygon points="23 7 16 12 23 17 23 7"/>
+            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+          </svg>
+        </button>
+
+        <button @click="toggleScreen" class="idle-btn" title="屏幕共享">
+          <svg class="icon" viewBox="0 0 24 24">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- 纯音频通话 -->
+      <div v-else-if="callMode === 'audio'" class="audio-call">
+        <div class="avatar-container">
+          <div class="avatar-circle">
+            <div class="avatar-initials">{{ userInitials }}</div>
+          </div>
+          <div class="user-name">{{ userName }}</div>
+          <div class="call-status">音频通话中...</div>
+        </div>
+      </div>
+
+      <!-- 视频通话（无屏幕共享） -->
+      <div v-else-if="callMode === 'video'" class="video-call">
         <video 
           ref="localVideoRef" 
           autoplay 
           muted 
           playsinline
-          class="preview-video"
+          class="video-stream fullscreen"
         ></video>
+        <div class="video-overlay">
+          <div class="user-label">你</div>
+        </div>
       </div>
 
-      <!-- 本地屏幕共享预览 -->
-      <div v-if="media.localScreenStream.value" class="stream-preview">
-        <div class="stream-label">屏幕共享</div>
+      <!-- 屏幕共享（无视频） -->
+      <div v-else-if="callMode === 'screen'" class="screen-share">
         <video 
           ref="localScreenRef" 
           autoplay 
           muted 
           playsinline
-          class="preview-video"
+          class="video-stream fullscreen"
         ></video>
+        <div class="video-overlay">
+          <div class="user-label">你的屏幕</div>
+        </div>
       </div>
 
-      <!-- 远程流 -->
-      <div 
-        v-for="peerStream in media.remotePeerStreams.value" 
-        :key="`${peerStream.peerId}-${peerStream.type}`"
-        class="stream-preview"
-      >
-        <div class="stream-label">
-          {{ peerStream.peerId.slice(0, 8) }} - {{ getStreamTypeLabel(peerStream.type) }}
+      <!-- 视频+屏幕共享 -->
+      <div v-else-if="callMode === 'video-screen'" class="split-view">
+        <div class="split-panel">
+          <video 
+            ref="localVideoRef" 
+            autoplay 
+            muted 
+            playsinline
+            class="video-stream"
+          ></video>
+          <div class="panel-label">摄像头</div>
         </div>
-        
-        <!-- 视频/屏幕显示 -->
-        <video 
-          v-if="peerStream.hasVideo"
-          :ref="el => setRemoteVideoRef(el, peerStream.peerId, peerStream.type)"
-          autoplay 
-          playsinline
-          class="preview-video"
-        ></video>
-        
-        <!-- 仅音频显示 -->
-        <audio 
-          v-else-if="peerStream.hasAudio"
-          :ref="el => setRemoteAudioRef(el, peerStream.peerId)"
-          autoplay
-        ></audio>
-        
-        <div v-if="!peerStream.hasVideo && peerStream.hasAudio" class="audio-only">
-          <span class="audio-icon">🎵</span>
+        <div class="split-panel">
+          <video 
+            ref="localScreenRef" 
+            autoplay 
+            muted 
+            playsinline
+            class="video-stream"
+          ></video>
+          <div class="panel-label">屏幕共享</div>
         </div>
       </div>
+    </div>
+
+    <!-- 底部控制栏 -->
+    <div v-if="isInCall" class="bottom-controls">
+      <!-- 纯音频模式 -->
+      <template v-if="callMode === 'audio'">
+        <button 
+          @click="toggleAudio" 
+          :class="['main-control-btn', 'danger', { active: !media.mediaState.value.isAudioEnabled }]"
+        >
+          <svg class="icon" viewBox="0 0 24 24">
+            <line x1="1" y1="1" x2="23" y2="23"/>
+            <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/>
+            <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/>
+          </svg>
+          <span>{{ media.mediaState.value.isAudioEnabled ? '关闭麦克风' : '开启麦克风' }}</span>
+        </button>
+      </template>
+
+      <!-- 视频模式 -->
+      <template v-else-if="callMode === 'video'">
+        <button 
+          @click="toggleAudio" 
+          :class="['control-btn-bottom', { active: media.mediaState.value.isAudioEnabled }]"
+        >
+          <svg class="icon" viewBox="0 0 24 24">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="23"/>
+            <line x1="8" y1="23" x2="16" y2="23"/>
+          </svg>
+        </button>
+
+        <button 
+          @click="toggleVideo" 
+          :class="['control-btn-bottom', 'danger', { active: !media.mediaState.value.isVideoEnabled }]"
+        >
+          <svg class="icon" viewBox="0 0 24 24">
+            <line x1="1" y1="1" x2="23" y2="23"/>
+            <path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10"/>
+          </svg>
+        </button>
+      </template>
+
+      <!-- 屏幕共享模式 -->
+      <template v-else-if="callMode === 'screen'">
+        <button 
+          @click="toggleAudio" 
+          :class="['control-btn-bottom', { active: media.mediaState.value.isAudioEnabled }]"
+        >
+          <svg class="icon" viewBox="0 0 24 24">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+          </svg>
+        </button>
+
+        <button 
+          @click="toggleScreen" 
+          :class="['control-btn-bottom', 'danger']"
+        >
+          <svg class="icon" viewBox="0 0 24 24">
+            <line x1="1" y1="1" x2="23" y2="23"/>
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+          </svg>
+        </button>
+      </template>
+
+      <!-- 视频+屏幕模式 -->
+      <template v-else-if="callMode === 'video-screen'">
+        <button 
+          @click="toggleAudio" 
+          :class="['control-btn-bottom', { active: media.mediaState.value.isAudioEnabled }]"
+        >
+          <svg class="icon" viewBox="0 0 24 24">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+          </svg>
+        </button>
+
+        <button 
+          @click="toggleVideo" 
+          :class="['control-btn-bottom', { active: media.mediaState.value.isVideoEnabled }]"
+        >
+          <svg class="icon" viewBox="0 0 24 24">
+            <polygon points="23 7 16 12 23 17 23 7"/>
+            <rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>
+          </svg>
+        </button>
+
+        <button 
+          @click="toggleSystemAudio" 
+          :class="['control-btn-bottom', { active: media.mediaState.value.isSystemAudioEnabled }]"
+          title="系统音频"
+        >
+          <svg class="icon" viewBox="0 0 24 24">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+          </svg>
+        </button>
+
+        <button 
+          @click="toggleScreen" 
+          :class="['control-btn-bottom', 'danger']"
+        >
+          <svg class="icon" viewBox="0 0 24 24">
+            <line x1="1" y1="1" x2="23" y2="23"/>
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+          </svg>
+        </button>
+      </template>
     </div>
   </div>
 </template>
@@ -90,23 +257,35 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
 import type { useMedia } from '../composables/useMedia'
+import { getUserInitials } from '../lib/utils'
 
 const props = defineProps<{
   media: ReturnType<typeof useMedia>
+  userName?: string
 }>()
 
 const localVideoRef = ref<HTMLVideoElement | null>(null)
 const localScreenRef = ref<HTMLVideoElement | null>(null)
-const remoteVideoRefs = new Map<string, HTMLVideoElement>()
-const remoteAudioRefs = new Map<string, HTMLAudioElement>()
 
-// 计算是否有活动的媒体
-const hasActiveMedia = computed(() => {
-  return props.media.mediaState.value.isAudioEnabled || 
-         props.media.mediaState.value.isVideoEnabled || 
-         props.media.mediaState.value.isScreenSharing ||
-         props.media.remotePeerStreams.value.length > 0
+// 用户名缩写
+const userInitials = computed(() => getUserInitials(props.userName || 'User'))
+
+// 通话模式
+const callMode = computed(() => {
+  const isAudio = props.media.mediaState.value.isAudioEnabled
+  const isVideo = props.media.mediaState.value.isVideoEnabled
+  const isScreen = props.media.mediaState.value.isScreenSharing
+
+  if (!isAudio && !isVideo && !isScreen) return 'idle'
+  if (isVideo && isScreen) return 'video-screen'
+  if (isScreen) return 'screen'
+  if (isVideo) return 'video'
+  if (isAudio) return 'audio'
+  return 'idle'
 })
+
+const callModeClass = computed(() => `mode-${callMode.value}`)
+const isInCall = computed(() => callMode.value !== 'idle')
 
 // 音频通话切换
 const toggleAudio = async () => {
@@ -150,29 +329,9 @@ const toggleScreen = async () => {
   }
 }
 
-// 获取流类型标签
-const getStreamTypeLabel = (type: any): string => {
-  const labels: Record<string, string> = {
-    'AUDIO': '音频',
-    'VIDEO': '视频',
-    'SCREEN': '屏幕'
-  }
-  return labels[type] || '未知'
-}
-
-// 设置远程视频引用
-const setRemoteVideoRef = (el: any, peerId: string, type: any) => {
-  if (el) {
-    const key = `${peerId}-${type}`
-    remoteVideoRefs.set(key, el as HTMLVideoElement)
-  }
-}
-
-// 设置远程音频引用
-const setRemoteAudioRef = (el: any, peerId: string) => {
-  if (el) {
-    remoteAudioRefs.set(peerId, el as HTMLAudioElement)
-  }
+// 系统音频切换（暂未实现）
+const toggleSystemAudio = () => {
+  alert('系统音频控制功能开发中...')
 }
 
 // 监听本地视频流变化
@@ -180,7 +339,6 @@ watch(() => props.media.localVideoStream.value, async (stream) => {
   await nextTick()
   if (stream && localVideoRef.value) {
     localVideoRef.value.srcObject = stream
-    console.log('[MediaControls] 本地视频流已设置')
   }
 })
 
@@ -189,146 +347,334 @@ watch(() => props.media.localScreenStream.value, async (stream) => {
   await nextTick()
   if (stream && localScreenRef.value) {
     localScreenRef.value.srcObject = stream
-    console.log('[MediaControls] 本地屏幕流已设置')
   }
 })
-
-// 监听远程流变化
-watch(() => props.media.remotePeerStreams.value, async (streams) => {
-  await nextTick()
-  streams.forEach(peerStream => {
-    if (peerStream.hasVideo) {
-      const key = `${peerStream.peerId}-${peerStream.type}`
-      const videoEl = remoteVideoRefs.get(key)
-      if (videoEl && videoEl.srcObject !== peerStream.stream) {
-        videoEl.srcObject = peerStream.stream
-        // 确保视频播放
-        videoEl.play().catch(err => {
-          console.warn(`[MediaControls] 视频自动播放失败: ${key}`, err)
-        })
-        console.log(`[MediaControls] 设置远程视频流: ${key}`)
-      }
-    } else if (peerStream.hasAudio) {
-      const audioEl = remoteAudioRefs.get(peerStream.peerId)
-      if (audioEl && audioEl.srcObject !== peerStream.stream) {
-        audioEl.srcObject = peerStream.stream
-        // 确保音频播放
-        audioEl.play().catch(err => {
-          console.warn(`[MediaControls] 音频自动播放失败: ${peerStream.peerId}`, err)
-        })
-        console.log(`[MediaControls] 设置远程音频流: ${peerStream.peerId}`)
-      }
-    }
-  })
-}, { deep: true, immediate: true })
 </script>
 
 <style scoped>
-.media-controls-compact {
+.media-controls {
   display: flex;
   flex-direction: column;
   height: 100%;
+  color: white;
+  position: relative;
   overflow: hidden;
 }
 
-.control-buttons-vertical {
+/* 顶部控制栏 */
+.top-controls {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 20px 0;
-  align-items: center;
-  flex-shrink: 0;
+  justify-content: center;
+  gap: 16px;
+  padding: 20px;
+  background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
+  z-index: 10;
 }
 
-.media-btn {
+.control-btn {
   width: 48px;
   height: 48px;
-  border: none;
-  border-radius: 12px;
-  background: #f5f5f5;
-  font-size: 24px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-radius: 50%;
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(10px);
+  color: white;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.control-btn:hover {
+  background: rgba(255,255,255,0.2);
+  transform: scale(1.1);
+}
+
+.control-btn.active {
+  background: rgba(102, 126, 234, 0.8);
+  border-color: rgba(102, 126, 234, 1);
+}
+
+.control-btn .icon {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 主显示区域 */
+.main-display {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
 }
 
-.media-btn:hover {
-  transform: scale(1.3);
-  background: #e8e8e8;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  z-index: 10;
-}
-
-.media-btn.active {
-  background: linear-gradient(135deg, #667eea22 0%, #764ba222 100%);
-  border: 2px solid #667eea;
-}
-
-.media-btn.active:hover {
-  background: linear-gradient(135deg, #667eea33 0%, #764ba233 100%);
-}
-
-.media-streams {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0 8px 20px 8px;
+/* 空闲状态 */
+.idle-state {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
 }
 
-.stream-preview {
-  background: #f8f8f8;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.stream-label {
-  padding: 6px 8px;
-  background: rgba(102, 126, 234, 0.1);
-  font-size: 11px;
-  font-weight: 600;
-  color: #667eea;
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.preview-video {
-  width: 100%;
-  display: block;
-  background: #000;
-  aspect-ratio: 4/3;
-  object-fit: contain;
-}
-
-.audio-only {
-  padding: 20px;
+.idle-btn {
+  width: 64px;
+  height: 64px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  transition: all 0.3s;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea11 0%, #764ba211 100%);
+  position: relative;
 }
 
-.audio-icon {
-  font-size: 32px;
+.idle-btn:hover {
+  background: rgba(255,255,255,0.2);
+  transform: scale(1.15);
+}
+
+.idle-btn:nth-child(1) {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.idle-btn:nth-child(2) {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.idle-btn:nth-child(3) {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.idle-btn:hover {
+  transform: scale(1.15);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+
+.idle-btn .icon {
+  width: 32px;
+  height: 32px;
+  fill: none;
+  stroke: white;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* 音频通话 */
+.audio-call {
+  text-align: center;
+}
+
+.avatar-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.avatar-circle {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.4);
   animation: pulse 2s ease-in-out infinite;
 }
 
 @keyframes pulse {
   0%, 100% {
-    opacity: 1;
-    transform: scale(1);
+    box-shadow: 0 8px 32px rgba(102, 126, 234, 0.4);
   }
   50% {
-    opacity: 0.6;
-    transform: scale(1.1);
+    box-shadow: 0 8px 48px rgba(102, 126, 234, 0.6);
   }
 }
-</style>
 
+.avatar-initials {
+  font-size: 64px;
+  font-weight: 700;
+  color: white;
+}
+
+.user-name {
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.call-status {
+  color: rgba(255,255,255,0.6);
+  font-size: 16px;
+}
+
+/* 视频通话 */
+.video-call, .screen-share {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.video-stream {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #000;
+}
+
+.video-stream.fullscreen {
+  object-fit: contain;
+}
+
+.video-overlay {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.user-label {
+  padding: 8px 16px;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* 分屏视图 */
+.split-view {
+  display: grid;
+  grid-template-rows: 1fr 1fr;  /* 上下分屏 */
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  padding: 8px;
+}
+
+.split-panel {
+  position: relative;
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.split-panel .video-stream {
+  width: 100%;
+  height: 100%;
+}
+
+.panel-label {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  padding: 6px 12px;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* 底部控制栏 */
+.bottom-controls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  background: linear-gradient(0deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%);
+  z-index: 10;
+}
+
+.control-btn-bottom {
+  width: 56px;
+  height: 56px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(10px);
+  color: white;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.control-btn-bottom:hover {
+  background: rgba(255,255,255,0.25);
+  transform: scale(1.1);
+}
+
+.control-btn-bottom.active {
+  background: rgba(102, 126, 234, 0.8);
+}
+
+.control-btn-bottom.danger {
+  background: rgba(239, 68, 68, 0.8);
+}
+
+.control-btn-bottom.danger:hover {
+  background: rgba(239, 68, 68, 1);
+}
+
+.control-btn-bottom .icon {
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.main-control-btn {
+  padding: 16px 32px;
+  border: none;
+  border-radius: 32px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(239, 68, 68, 0.8);
+  color: white;
+}
+
+.main-control-btn:hover {
+  background: rgba(239, 68, 68, 1);
+  transform: translateY(-2px);
+}
+
+.main-control-btn .icon {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+</style>

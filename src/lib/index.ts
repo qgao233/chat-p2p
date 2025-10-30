@@ -77,3 +77,6 @@ export type {
   VerificationTokenRaw
 } from './res/PeerVerificationManager'
 
+// 工具函数
+export { getUserInitials, generateDefaultUsername } from './utils'
+

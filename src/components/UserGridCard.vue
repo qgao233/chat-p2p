@@ -18,6 +18,20 @@
         <div v-else class="avatar-initials">{{ initials }}</div>
       </div>
 
+      <!-- 放大按钮（鼠标悬停时显示） -->
+      <button 
+        class="expand-btn"
+        :title="isExpanded ? '退出放大' : '放大显示'"
+        @click="toggleExpand"
+      >
+        <svg v-if="!isExpanded" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"></path>
+        </svg>
+        <svg v-else class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 14h6v6M20 10h-6V4M10 10l-7 7M14 14l7-7"></path>
+        </svg>
+      </button>
+
       <!-- 屏幕共享标识 -->
       <div v-if="isScreenShare" class="screen-share-badge">
         <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -28,13 +42,14 @@
         <span>屏幕共享</span>
       </div>
 
-      <!-- 右下角图标组 -->
-      <div v-if="!isScreenShare" class="icon-group">
-        <!-- 音频图标 -->
-        <div 
+      <!-- 右下角图标组（只对非本地用户显示） -->
+      <div v-if="!isScreenShare && !isLocal" class="icon-group">
+        <!-- 音频图标（可点击控制） -->
+        <button
           class="icon-badge" 
           :class="{ 'icon-active': audioEnabled, 'icon-muted': !audioEnabled }"
-          :title="audioEnabled ? '音频已开启' : '音频已静音'"
+          :title="audioEnabled ? '点击静音' : '点击取消静音'"
+          @click="toggleAudio"
         >
           <svg v-if="audioEnabled" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
@@ -49,13 +64,14 @@
             <line x1="12" y1="19" x2="12" y2="23"></line>
             <line x1="8" y1="23" x2="16" y2="23"></line>
           </svg>
-        </div>
+        </button>
         
-        <!-- 视频图标 -->
-        <div 
+        <!-- 视频图标（可点击控制） -->
+        <button
           class="icon-badge" 
           :class="{ 'icon-active': videoEnabled, 'icon-muted': !videoEnabled }"
-          :title="videoEnabled ? '视频已开启' : '视频已关闭'"
+          :title="videoEnabled ? '点击关闭视频' : '点击开启视频'"
+          @click="toggleVideo"
         >
           <svg v-if="videoEnabled" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polygon points="23 7 16 12 23 17 23 7"></polygon>
@@ -65,7 +81,7 @@
             <line x1="1" y1="1" x2="23" y2="23"></line>
             <path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10"></path>
           </svg>
-        </div>
+        </button>
       </div>
     </div>
     
@@ -76,6 +92,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
+import { getUserInitials } from '../lib/utils'
 
 interface Props {
   username: string
@@ -86,6 +103,7 @@ interface Props {
   videoStream?: MediaStream | null
   isScreenShare?: boolean
   isLocal?: boolean
+  isExpanded?: boolean
   maxNameLength?: number
 }
 
@@ -96,30 +114,39 @@ const props = withDefaults(defineProps<Props>(), {
   videoStream: null,
   isScreenShare: false,
   isLocal: false,
+  isExpanded: false,
   maxNameLength: 12
 })
 
+const emit = defineEmits<{
+  toggleAudio: []
+  toggleVideo: []
+  toggleExpand: []
+}>()
+
 const videoRef = ref<HTMLVideoElement | null>(null)
 
+// 切换音频
+const toggleAudio = () => {
+  if (!props.isLocal) {
+    emit('toggleAudio')
+  }
+}
+
+// 切换视频
+const toggleVideo = () => {
+  if (!props.isLocal) {
+    emit('toggleVideo')
+  }
+}
+
+// 切换放大
+const toggleExpand = () => {
+  emit('toggleExpand')
+}
+
 // 计算名称缩写
-const initials = computed(() => {
-  if (!props.username) return '?'
-  
-  const name = props.username.trim()
-  
-  // 如果是中文，取前两个字
-  if (/[\u4e00-\u9fa5]/.test(name)) {
-    return name.slice(0, 2)
-  }
-  
-  // 如果是英文，取首字母（最多两个单词）
-  const words = name.split(/\s+/)
-  if (words.length >= 2) {
-    return (words[0][0] + words[1][0]).toUpperCase()
-  }
-  
-  return name.slice(0, 2).toUpperCase()
-})
+const initials = computed(() => getUserInitials(props.username))
 
 // 显示名称（带长度限制）
 const displayName = computed(() => {
@@ -152,6 +179,10 @@ watch(() => props.videoStream, async (stream) => {
 
 .user-grid-card:hover {
   transform: translateY(-2px);
+}
+
+.user-grid-card:hover .expand-btn {
+  opacity: 1;
 }
 
 .avatar-container {
@@ -210,12 +241,47 @@ watch(() => props.videoStream, async (stream) => {
   user-select: none;
 }
 
+/* 放大按钮 */
+.expand-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  border: none;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.2s;
+  z-index: 10;
+}
+
+.expand-btn:hover {
+  background: rgba(0, 0, 0, 0.8);
+  transform: scale(1.1);
+}
+
+.expand-btn:active {
+  transform: scale(0.95);
+}
+
+.expand-btn .icon {
+  width: 16px;
+  height: 16px;
+}
+
 /* 屏幕共享标识 */
 .screen-share-badge {
   position: absolute;
   top: 8px;
   left: 8px;
-  right: 8px;
+  right: 48px;
   padding: 4px 8px;
   background: rgba(245, 87, 108, 0.95);
   backdrop-filter: blur(8px);
@@ -252,6 +318,17 @@ watch(() => props.videoStream, async (stream) => {
   justify-content: center;
   backdrop-filter: blur(8px);
   transition: all 0.2s;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.icon-badge:hover {
+  transform: scale(1.1);
+}
+
+.icon-badge:active {
+  transform: scale(0.95);
 }
 
 .icon-badge.icon-active {

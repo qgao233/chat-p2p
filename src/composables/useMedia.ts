@@ -20,6 +20,7 @@ export const useMedia = (peerRoom: Ref<PeerRoom | null>) => {
         isAudioEnabled: false,
         isVideoEnabled: false,
         isScreenSharing: false,
+        isSystemAudioEnabled: false,
     })
 
     // 本地流的计算属性
@@ -197,15 +198,25 @@ export const useMedia = (peerRoom: Ref<PeerRoom | null>) => {
 
         for (const streamType of HookStreamMap[peerStreamType] as StreamType[]) {
             if(localStreamTypeMap.value.has(streamType)) {
-                if(streamType == StreamType.SCREEN_SHARE){
-                    peerRoom.value.removeStream(localStreamTypeMap.value.get(StreamType.SYSTEM_AUDIO_IN_SCREEN_SHARE) as MediaStream)
-                    localStreamTypeMap.value.get(StreamType.SYSTEM_AUDIO_IN_SCREEN_SHARE)?.getTracks().forEach(track => track.stop())
-                    localStreamTypeMap.value.delete(StreamType.SYSTEM_AUDIO_IN_SCREEN_SHARE)
+                // 如果是屏幕共享，先处理系统音频流（如果存在）
+                if(streamType === StreamType.SCREEN_SHARE){
+                    const systemAudioStream = localStreamTypeMap.value.get(StreamType.SYSTEM_AUDIO_IN_SCREEN_SHARE)
+                    if (systemAudioStream) {
+                        peerRoom.value.removeStream(systemAudioStream, targetPeers)
+                        systemAudioStream.getTracks().forEach(track => track.stop())
+                        localStreamTypeMap.value.delete(StreamType.SYSTEM_AUDIO_IN_SCREEN_SHARE)
+                        console.log('[useMedia] 系统音频流已停止')
+                    }
                 }
-                peerRoom.value.removeStream(localStreamTypeMap.value.get(streamType) as MediaStream)
-                localStreamTypeMap.value.get(streamType)?.getTracks().forEach(track => track.stop())
-                localStreamTypeMap.value.delete(streamType)
-                console.log(`[useMedia] ${peerStreamType}已停止`)
+                
+                // 处理主流
+                const stream = localStreamTypeMap.value.get(streamType)
+                if (stream) {
+                    peerRoom.value.removeStream(stream, targetPeers)
+                    stream.getTracks().forEach(track => track.stop())
+                    localStreamTypeMap.value.delete(streamType)
+                    console.log(`[useMedia] ${peerStreamType}已停止`)
+                }
             }
         }
 
@@ -220,6 +231,7 @@ export const useMedia = (peerRoom: Ref<PeerRoom | null>) => {
         mediaState.value.isAudioEnabled = localStreamTypeMap.value.has(StreamType.MICROPHONE)
         mediaState.value.isVideoEnabled = localStreamTypeMap.value.has(StreamType.WEBCAM)
         mediaState.value.isScreenSharing = localStreamTypeMap.value.has(StreamType.SCREEN_SHARE)
+        mediaState.value.isSystemAudioEnabled = localStreamTypeMap.value.has(StreamType.SYSTEM_AUDIO_IN_SCREEN_SHARE)
     }
 
     /**
