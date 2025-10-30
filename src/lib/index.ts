@@ -40,6 +40,7 @@ export {
   PeerAction,
 
   PeerHookType,
+  PeerStreamType,
   StreamType,
   StreamTypeMap,
   HookStreamMap,

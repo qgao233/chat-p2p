@@ -67,10 +67,14 @@ export enum PeerVerificationState {
  */
 export enum PeerHookType {
   NEW_PEER = 'NEW_PEER',           // 新对等方加入
+  STREAM = 'STREAM',              // 流事件
+  FILE_SHARE = 'FILE_SHARE',       // 文件传输事件
+}
+
+export enum PeerStreamType{
   AUDIO = 'AUDIO',                 // 音频流事件
   VIDEO = 'VIDEO',                 // 视频流事件
   SCREEN = 'SCREEN',               // 屏幕共享事件
-  FILE_SHARE = 'FILE_SHARE',       // 文件传输事件
 }
 
 /**
@@ -90,10 +94,10 @@ export const StreamTypeMap: Partial<Record<StreamType, StreamType[]>> = {
   ],
 }
 
-export const HookStreamMap: Partial<Record<PeerHookType, StreamType[]>> = {
-  [PeerHookType.AUDIO]: [StreamType.MICROPHONE],
-  [PeerHookType.VIDEO]: [StreamType.MICROPHONE,StreamType.WEBCAM],
-  [PeerHookType.SCREEN]: [StreamType.MICROPHONE,StreamType.SCREEN_SHARE],
+export const HookStreamMap: Partial<Record<PeerStreamType, StreamType[]>> = {
+  [PeerStreamType.AUDIO]: [StreamType.MICROPHONE],
+  [PeerStreamType.VIDEO]: [StreamType.MICROPHONE,StreamType.WEBCAM],
+  [PeerStreamType.SCREEN]: [StreamType.MICROPHONE,StreamType.SCREEN_SHARE],
 }
 
 //================================

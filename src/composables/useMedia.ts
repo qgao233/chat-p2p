@@ -5,7 +5,7 @@
 
 import { ref, computed } from 'vue'
 import type { Ref } from 'vue'
-import { PeerRoom, PeerHookType, HookStreamMap, StreamType,StreamTypeMap } from '../lib'
+import { PeerRoom, PeerHookType, HookStreamMap,PeerStreamType, StreamType,StreamTypeMap } from '../lib'
 
 type LStreamTypeMap = Map<StreamType, MediaStream>
 
@@ -59,30 +59,32 @@ export const useMedia = (peerRoom: Ref<PeerRoom | null>) => {
     const initializeMediaListeners = () => {
         if (!peerRoom.value) return
 
-        //遍历HookStreamMap的key和value
-        for (const key of Object.keys(HookStreamMap)) {
-            const value = HookStreamMap[key as PeerHookType] as StreamType[]
+        // 监听对等方加入 - 重新发送当前活动的流给新 peer
+        peerRoom.value.onPeerJoin(PeerHookType.STREAM, (peerId) => {
+            //用 for of 遍历 localStreamTypeMap.value
+            for (const [streamType, stream] of localStreamTypeMap.value.entries()) {
+                console.log('[useMedia] 新 peer 加入，发送流给:', peerId, streamType, stream)
+                peerRoom.value?.addStream(stream, [peerId], { type: streamType as StreamType })
+            }
+        })
 
-            // 监听流
-            peerRoom.value.onPeerStream(key as PeerHookType, (stream, peerId, metadata) => {
-                const streamTypeMap:LStreamTypeMap = peerStreamTypeMap.value.get(peerId) || new Map()
-                streamTypeMap.set(metadata?.type as StreamType, stream)
-                peerStreamTypeMap.value.set(peerId, streamTypeMap)
-                console.log('[useMedia] 流已保存到 peerStreamTypeMap', peerId, streamTypeMap)
-            })
+        // 监听对等方离开
+        peerRoom.value.onPeerLeave(PeerHookType.STREAM, (peerId) => {
+            for (const [streamType, stream] of localStreamTypeMap.value.entries()) {
+                peerRoom.value?.removeStream(stream, [peerId])
+                console.log('[useMedia] 对等方离开，移除流:', peerId, streamType, stream)
+            }
+        })
 
-            // 监听对等方加入 - 重新发送当前活动的流给新 peer
-            peerRoom.value.onPeerJoin(key as PeerHookType, (peerId) => {
-                console.log('[useMedia] 新 peer 加入，发送流给:', peerId, key, value)
-                openStream(key as PeerHookType, [peerId])
-            })
 
-            // 监听对等方离开
-            peerRoom.value.onPeerLeave(key as PeerHookType, (peerId) => {
-                console.log('[useMedia] 对等方离开，移除流:', peerId, key, value)
-                closeStream(key as PeerHookType, [peerId])
-            })
-        }
+        // 监听流事件
+        peerRoom.value.onPeerStream(PeerHookType.STREAM, (stream, peerId, metadata) => {
+            const streamTypeMap:LStreamTypeMap = peerStreamTypeMap.value.get(peerId) || new Map()
+            streamTypeMap.set(metadata?.type as StreamType, stream)
+            peerStreamTypeMap.value.set(peerId, streamTypeMap)
+            console.log('[useMedia] 流已保存到 peerStreamTypeMap', peerId, streamTypeMap)
+        })
+        
 
         console.log('[useMedia] 媒体事件监听器已初始化')
     }
@@ -158,14 +160,14 @@ export const useMedia = (peerRoom: Ref<PeerRoom | null>) => {
         return streamTypeMap
     }
 
-    const openStream = async (peekHookType: PeerHookType, targetPeers?: string[]) : Promise<void> => {
+    const openStream = async (peerStreamType: PeerStreamType, targetPeers?: string[]) : Promise<void> => {
         if (!peerRoom.value) {
             throw new Error('PeerRoom 未初始化')
         }
 
         try {
             // 添加到 PeerRoom
-            for (const streamType of HookStreamMap[peekHookType] as StreamType[]) {
+            for (const streamType of HookStreamMap[peerStreamType] as StreamType[]) {
                 const streamTypeMap = await getStreamTypeMap(streamType)
                 if (streamTypeMap.size > 0) {
                     for (const [streamType, stream] of streamTypeMap.entries()) {
@@ -183,17 +185,17 @@ export const useMedia = (peerRoom: Ref<PeerRoom | null>) => {
             // 更新媒体状态
             updateMediaState()
         } catch (error) {
-            console.error(`[useMedia] 启动${peekHookType}失败:`, error)
+            console.error(`[useMedia] 启动${peerStreamType}失败:`, error)
             throw error
         }
     }
 
-    const closeStream = async (peekHookType: PeerHookType, targetPeers?: string[]) : Promise<void> => {
+    const closeStream = async (peerStreamType: PeerStreamType, targetPeers?: string[]) : Promise<void> => {
         if (!peerRoom.value) {
             throw new Error('PeerRoom 未初始化')
         }
 
-        for (const streamType of HookStreamMap[peekHookType] as StreamType[]) {
+        for (const streamType of HookStreamMap[peerStreamType] as StreamType[]) {
             if(localStreamTypeMap.value.has(streamType)) {
                 if(streamType == StreamType.SCREEN_SHARE){
                     peerRoom.value.removeStream(localStreamTypeMap.value.get(StreamType.SYSTEM_AUDIO_IN_SCREEN_SHARE) as MediaStream)
@@ -203,7 +205,7 @@ export const useMedia = (peerRoom: Ref<PeerRoom | null>) => {
                 peerRoom.value.removeStream(localStreamTypeMap.value.get(streamType) as MediaStream)
                 localStreamTypeMap.value.get(streamType)?.getTracks().forEach(track => track.stop())
                 localStreamTypeMap.value.delete(streamType)
-                console.log(`[useMedia] ${peekHookType}已停止`)
+                console.log(`[useMedia] ${peerStreamType}已停止`)
             }
         }
 
@@ -224,42 +226,42 @@ export const useMedia = (peerRoom: Ref<PeerRoom | null>) => {
      * 启动音频通话（仅麦克风）
      */
     const startAudioCall = async () => {
-        await openStream(PeerHookType.AUDIO)
+        await openStream(PeerStreamType.AUDIO)
     }
 
     /**
      * 停止音频通话
      */
     const stopAudioCall = () => {
-        closeStream(PeerHookType.AUDIO)
+        closeStream(PeerStreamType.AUDIO)
     }
 
     /**
      * 启动视频通话（摄像头 + 麦克风）
      */
     const startVideoCall = async () => {
-        openStream(PeerHookType.VIDEO)
+        openStream(PeerStreamType.VIDEO)
     }
 
     /**
      * 停止视频通话
      */
     const stopVideoCall = () => {
-        closeStream(PeerHookType.VIDEO)
+        closeStream(PeerStreamType.VIDEO)
     }
 
     /**
      * 启动屏幕共享（屏幕 + 系统音 + 麦克风）
      */
     const startScreenShare = async () => {
-        openStream(PeerHookType.SCREEN)
+        openStream(PeerStreamType.SCREEN)
     }
 
     /**
      * 停止屏幕共享
      */
     const stopScreenShare = () => {
-        closeStream(PeerHookType.SCREEN)
+        closeStream(PeerStreamType.SCREEN)
     }
 
     /**
