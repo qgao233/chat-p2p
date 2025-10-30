@@ -69,7 +69,10 @@
                 :key="msg.id"
                 :class="['message', msg.userId === currentUserId ? 'message-own' : 'message-peer']"
               >
-                <div class="message-header">
+                <div 
+                  class="message-header"
+                  :class="msg.userId === currentUserId ? 'message-header-own' : 'message-header-peer'"
+                >
                   <span class="message-username">{{ msg.username }}</span>
                   <span class="message-time">{{ formatTime(msg.timestamp) }}</span>
                 </div>
@@ -365,13 +368,21 @@ watch(showUsernameDialog, async (show) => {
 
 .message-header {
   display: flex;
-  justify-content: space-between;
   margin-bottom: 4px;
   font-size: 12px;
 }
 
+.message-header-own {
+  justify-content: flex-end;
+}
+
+.message-header-peer {
+  justify-content: flex-start;
+}
+
 .message-username {
   font-weight: 600;
+  margin-right: 10px;
   color: #667eea;
 }
 
