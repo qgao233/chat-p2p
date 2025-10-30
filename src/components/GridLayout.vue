@@ -266,7 +266,7 @@
     let position = 0
     // 计算第 colIndex 列的右边界位置
     for (let i = 0; i <= colIndex; i++) {
-      position += columnRatios.value[i] * availableWidth
+      position += (columnRatios.value[i] || 0) * availableWidth
       if (i < colIndex) {
         position += props.gap
       }
@@ -283,7 +283,7 @@
     let position = 0
     // 计算第 rowIndex 行的下边界位置
     for (let i = 0; i <= rowIndex; i++) {
-      position += rowRatios.value[i] * availableHeight
+      position += (rowRatios.value[i] || 0) * availableHeight
       if (i < rowIndex) {
         position += props.gap
       }
@@ -322,8 +322,8 @@
       const deltaRatio = delta / availableWidth
       
       // 调整相邻两列的比例
-      const newLeftRatio = startRatios[index] + deltaRatio
-      const newRightRatio = startRatios[index + 1] - deltaRatio
+      const newLeftRatio = (startRatios[index] || 0) + deltaRatio
+      const newRightRatio = (startRatios[index + 1] || 0) - deltaRatio
       
       // 确保比例不小于最小值（例如5%）
       const minRatio = 0.05
@@ -340,8 +340,8 @@
       const deltaRatio = delta / availableHeight
       
       // 调整相邻两行的比例
-      const newTopRatio = startRatios[index] + deltaRatio
-      const newBottomRatio = startRatios[index + 1] - deltaRatio
+      const newTopRatio = (startRatios[index] || 0) + deltaRatio
+      const newBottomRatio = (startRatios[index + 1] || 0) - deltaRatio
       
       // 确保比例不小于最小值
       const minRatio = 0.05

@@ -15,6 +15,22 @@ import {
 } from '../lib'
 import type { Message, UserMetadata } from '../lib'
 import { encryption } from '../services/encryption'
+
+// 辅助函数：ArrayBuffer 转 Base64
+const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
+  const binary = String.fromCharCode(...new Uint8Array(buffer))
+  return btoa(binary)
+}
+
+// 辅助函数：Base64 转 ArrayBuffer
+const base64ToArrayBuffer = (base64: string): ArrayBuffer => {
+  const binaryString = atob(base64)
+  const bytes = new Uint8Array(binaryString.length)
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i)
+  }
+  return bytes.buffer
+}
 import { rtcConfig } from '../config/rtc'
 import { useMedia } from './useMedia'
 import { useFileShare } from './useFileShare'
@@ -141,11 +157,40 @@ export const useRoom = (roomId: string) => {
       console.log('[useRoom] 本地私钥已设置到验证管理器')
     }
 
-    // 设置消息通道
+    // 设置消息通道（支持加密）
     const messageAction = peerRoom.createMessageAction()
     sendMessage = messageAction.sendMessage
-    messageAction.onMessage((message) => {
-      messages.value.push(message)
+    
+    // 接收消息并解密
+    messageAction.onMessage(async (message) => {
+      try {
+        // 如果消息是加密的，解密它
+        if (message.encrypted && message.encryptedAESKey && message.iv && privateKey.value) {
+          console.log('[useRoom] 收到加密消息，开始解密')
+          
+          // 1. 解密 AES 密钥
+          const encryptedKeyBuffer = base64ToArrayBuffer(message.encryptedAESKey)
+          const aesKey = await encryption.decryptAESKey(encryptedKeyBuffer, privateKey.value)
+          
+          // 2. 解密消息文本
+          const encryptedTextBuffer = base64ToArrayBuffer(message.text)
+          const iv = new Uint8Array(base64ToArrayBuffer(message.iv))
+          const decryptedText = await encryption.decryptText(encryptedTextBuffer, aesKey, iv)
+          
+          // 3. 替换为解密后的文本
+          message.text = decryptedText
+          console.log('[useRoom] 消息解密成功')
+        }
+        
+        messages.value.push(message)
+      } catch (error) {
+        console.error('[useRoom] 消息解密失败:', error)
+        // 即使解密失败，也显示消息（可能显示为加密文本）
+        messages.value.push({
+          ...message,
+          text: '[加密消息解密失败]'
+        })
+      }
     })
 
     // 设置元数据通道
@@ -335,24 +380,70 @@ export const useRoom = (roomId: string) => {
   }
 
   /**
-   * 发送消息
+   * 发送加密消息
    */
-  const sendChatMessage = (text: string) => {
+  const sendChatMessage = async (text: string) => {
     if (!sendMessage || !text.trim()) return
 
-    const message: Message = {
-      id: uuid(),
+    const trimmedText = text.trim()
+    const messageId = uuid()
+    const timestamp = Date.now()
+
+    // 本地显示消息（明文）
+    const localMessage: Message = {
+      id: messageId,
       userId: currentUserId.value,
       username: currentUsername.value,
-      text: text.trim(),
-      timestamp: Date.now(),
+      text: trimmedText,
+      timestamp,
+    }
+    messages.value.push(localMessage)
+
+    // 获取在线的 peers
+    const onlinePeers = peers.value.filter(p => p.publicKey !== null)
+    
+    if (onlinePeers.length === 0) {
+      console.log('[useRoom] 没有在线的 peer，消息仅保存在本地')
+      return
     }
 
-    // 本地显示消息
-    messages.value.push(message)
-
-    // 发送给所有 peers
-    sendMessage(message)
+    try {
+      // 为每个 peer 加密并发送消息
+      for (const peer of onlinePeers) {
+        try {
+          // 1. 生成随机 AES 密钥
+          const aesKey = await encryption.generateAESKey()
+          
+          // 2. 使用 AES 加密消息文本
+          const { encryptedData, iv } = await encryption.encryptText(trimmedText, aesKey)
+          
+          // 3. 使用 peer 的公钥加密 AES 密钥
+          const encryptedAESKey = await encryption.encryptAESKey(aesKey, peer.publicKey!)
+          
+          // 4. 创建加密消息
+          const encryptedMessage: Message = {
+            id: messageId,
+            userId: currentUserId.value,
+            username: currentUsername.value,
+            text: arrayBufferToBase64(encryptedData),
+            timestamp,
+            encrypted: true,
+            encryptedAESKey: arrayBufferToBase64(encryptedAESKey),
+            iv: arrayBufferToBase64(iv.buffer as ArrayBuffer)
+          }
+          
+          // 5. 发送给特定 peer
+          sendMessage(encryptedMessage, peer.peerId)
+          console.log('[useRoom] 已向 peer 发送加密消息:', peer.username)
+        } catch (error) {
+          console.error('[useRoom] 向 peer 发送加密消息失败:', peer.username, error)
+        }
+      }
+      
+      console.log('[useRoom] 加密消息已发送给', onlinePeers.length, '个 peer')
+    } catch (error) {
+      console.error('[useRoom] 消息加密失败:', error)
+    }
   }
 
   /**

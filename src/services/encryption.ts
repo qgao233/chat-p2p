@@ -159,7 +159,7 @@ export class EncryptionService {
     const encryptedData = await window.crypto.subtle.encrypt(
       {
         name: 'AES-GCM',
-        iv: iv
+        iv: iv as BufferSource
       },
       key,
       fileData
@@ -179,7 +179,7 @@ export class EncryptionService {
     const decryptedData = await window.crypto.subtle.decrypt(
       {
         name: 'AES-GCM',
-        iv: iv
+        iv: iv as BufferSource
       },
       key,
       encryptedData
@@ -229,6 +229,53 @@ export class EncryptionService {
     )
     
     return aesKey
+  }
+
+  /**
+   * 加密文本消息（使用 AES-GCM）
+   */
+  encryptText = async (
+    text: string,
+    key: CryptoKey
+  ): Promise<{ encryptedData: ArrayBuffer; iv: Uint8Array }> => {
+    // 生成随机 IV
+    const iv = window.crypto.getRandomValues(new Uint8Array(12))
+    
+    // 编码文本
+    const textData = new TextEncoder().encode(text)
+    
+    // 加密
+    const encryptedData = await window.crypto.subtle.encrypt(
+      {
+        name: 'AES-GCM',
+        iv: iv as BufferSource
+      },
+      key,
+      textData
+    )
+    
+    return { encryptedData, iv }
+  }
+
+  /**
+   * 解密文本消息（使用 AES-GCM）
+   */
+  decryptText = async (
+    encryptedData: ArrayBuffer,
+    key: CryptoKey,
+    iv: Uint8Array
+  ): Promise<string> => {
+    const decryptedData = await window.crypto.subtle.decrypt(
+      {
+        name: 'AES-GCM',
+        iv: iv as BufferSource
+      },
+      key,
+      encryptedData
+    )
+    
+    const text = new TextDecoder().decode(decryptedData)
+    return text
   }
 }
 

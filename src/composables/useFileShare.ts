@@ -117,7 +117,7 @@ export const useFileShare = (
             magnetURI: metadata.magnetURI,
             isInline: metadata.isInline,
             encryptedAESKey: arrayBufferToBase64(encryptedAESKey),
-            iv: arrayBufferToBase64(metadata.iv)
+            iv: arrayBufferToBase64(metadata.iv.buffer as ArrayBuffer)
           }
 
           // 发送给特定 peer
@@ -235,8 +235,8 @@ export const useFileShare = (
       // 更新文件对象
       const fileIndex = sharedFiles.value.findIndex(f => f.id === sharedFile.id)
       
-      if (fileIndex !== -1) {
-        sharedFiles.value[fileIndex].blobUrl = blobUrl
+      if (fileIndex !== -1 && sharedFiles.value[fileIndex]) {
+        sharedFiles.value[fileIndex]!.blobUrl = blobUrl
         console.log('[useFileShare] 内联媒体自动下载并解密完成:', sharedFile.name)
       } else {
         console.error('[useFileShare] 找不到文件对象，无法更新 blobUrl')

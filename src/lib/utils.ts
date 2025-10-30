@@ -30,8 +30,8 @@ export const getUserInitials = (username: string): string => {
   
   // 如果是英文，取首字母（最多两个单词）
   const words = name.split(/\s+/)
-  if (words.length >= 2) {
-    return (words[0][0] + words[1][0]).toUpperCase()
+  if (words.length >= 2 && words[0] && words[1]) {
+    return ((words[0][0] || '') + (words[1][0] || '')).toUpperCase()
   }
   
   return name.slice(0, 2).toUpperCase()

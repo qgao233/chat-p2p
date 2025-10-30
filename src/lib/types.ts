@@ -137,7 +137,10 @@ export interface Message {
   username: string
   text: string
   timestamp: number
-  [key: string]: string | number  // 索引签名，满足 DataPayload 要求
+  encrypted?: boolean           // 是否加密
+  encryptedAESKey?: string     // Base64 编码的加密 AES 密钥
+  iv?: string                  // Base64 编码的初始化向量
+  [key: string]: string | number | boolean | undefined  // 索引签名，满足 DataPayload 要求
 }
 
 /**

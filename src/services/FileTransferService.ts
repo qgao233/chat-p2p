@@ -286,7 +286,7 @@ export class FileTransferService {
           this.handleTorrentDownload(existingTorrent, onProgress, resolve, reject)
         })
         
-        existingTorrent.on('error', (err: Error) => {
+        existingTorrent.once('error' as any, (err: Error) => {
           clearTimeout(timeout)
           console.error('[FileTransferService] 种子错误:', err)
           reject(err)
@@ -475,7 +475,7 @@ export class FileTransferService {
           return
         }
         if (buffer) {
-          const blob = new Blob([buffer], { type: file.type || 'application/octet-stream' })
+          const blob = new Blob([buffer as any], { type: file.type || 'application/octet-stream' })
           console.log('[FileTransferService] 成功通过 getBuffer 创建 Blob, 大小:', blob.size, '类型:', blob.type)
           resolve(blob)
         } else {
