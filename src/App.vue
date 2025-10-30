@@ -59,7 +59,7 @@
 
     <!-- 聊天室 -->
     <div v-else class="room-container">
-      <ChatRoom :roomId="roomId" @leave="leaveRoom" />
+      <ChatRoom :roomId="roomId" @leave="leaveRoom" @switch-room="switchRoom" />
     </div>
   </div>
 </template>
@@ -68,12 +68,13 @@
 import { ref, onMounted } from 'vue'
 import { v4 as uuid } from 'uuid'
 import ChatRoom from './pages/ChatRoom.vue'
+import { getPublicRoomId } from './lib/publicRoom'
 
 const roomId = ref('')
 const isInRoom = ref(false)
 const customRoomId = ref('')
 
-// 从 URL 获取房间 ID 或生成新的
+// 从 URL 获取房间 ID，如果没有则自动加入公共房间
 onMounted(() => {
   const urlParams = new URLSearchParams(window.location.search)
   const urlRoomId = urlParams.get('room')
@@ -81,8 +82,19 @@ onMounted(() => {
   if (urlRoomId) {
     roomId.value = urlRoomId
     isInRoom.value = true
+  } else {
+    // 自动加入公共房间
+    joinPublicRoom()
   }
 })
+
+// 加入公共房间
+const joinPublicRoom = () => {
+  const publicRoomId = getPublicRoomId()
+  roomId.value = publicRoomId
+  updateUrl(publicRoomId)
+  isInRoom.value = true
+}
 
 // 创建新房间
 const createRoom = () => {
@@ -108,11 +120,20 @@ const updateUrl = (id: string) => {
   window.history.pushState({}, '', url.toString())
 }
 
+// 切换房间
+const switchRoom = (newRoomId: string) => {
+  roomId.value = newRoomId
+  updateUrl(newRoomId)
+  isInRoom.value = true
+}
+
 // 离开房间
 const leaveRoom = () => {
   isInRoom.value = false
   roomId.value = ''
   window.history.pushState({}, '', window.location.pathname)
+  // 离开房间后自动加入公共房间
+  joinPublicRoom()
 }
 </script>
 

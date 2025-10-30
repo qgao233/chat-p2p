@@ -132,20 +132,32 @@ export const useRoom = (roomId: string) => {
     }
   }
 
+  // 防止重复加入房间的标志
+  let isJoining = false
+
   /**
    * 加入房间
    */
   const joinRoom = async () => {
     console.log('[useRoom] 开始加入房间:', roomId)
     
-    // 如果已经在房间中，先离开
-    if (peerRoom) {
-      console.log('[useRoom] 检测到已存在的房间连接，先清理')
-      leaveRoom()
+    // 防止重复调用
+    if (isJoining) {
+      console.log('[useRoom] 正在加入房间中，忽略重复调用')
+      return
     }
+    
+    isJoining = true
+    
+    try {
+      // 如果已经在房间中，先离开
+      if (peerRoom) {
+        console.log('[useRoom] 检测到已存在的房间连接，先清理')
+        await leaveRoom()
+      }
 
-    await initializeKeys()
-    console.log('[useRoom] 密钥初始化完成, userId:', currentUserId.value)
+      await initializeKeys()
+      console.log('[useRoom] 密钥初始化完成, userId:', currentUserId.value)
 
     // 创建 P2P 房间
     peerRoom = new PeerRoom(roomId, { rtcConfig })
@@ -318,6 +330,22 @@ export const useRoom = (roomId: string) => {
     onUnmounted(() => {
       clearInterval(connectionTypeInterval)
     })
+    } catch (error) {
+      console.error('[useRoom] 加入房间失败:', error)
+      // 清理已创建的资源
+      if (peerRoom) {
+        try {
+          peerRoom.leave()
+        } catch (e) {
+          console.error('[useRoom] 清理失败的房间连接时出错:', e)
+        }
+        peerRoom = null
+      }
+      throw error
+    } finally {
+      isJoining = false
+      console.log('[useRoom] joinRoom 完成，重置 isJoining 标志')
+    }
   }
 
   /**
@@ -469,24 +497,37 @@ export const useRoom = (roomId: string) => {
   /**
    * 离开房间
    */
-  const leaveRoom = () => {
-    console.log('[useRoom] 离开房间')
+  const leaveRoom = async () => {
+    console.log('[useRoom] 开始离开房间')
     
     // 清理媒体资源
-    media.cleanup()
+    try {
+      media.cleanup()
+      console.log('[useRoom] 媒体资源已清理')
+    } catch (error) {
+      console.error('[useRoom] 清理媒体资源时出错:', error)
+    }
     
     // 清理文件共享资源
     if (fileShare) {
-      fileShare.cleanup()
-      fileShare = null
-      sharedFiles.value = []
-      uploadProgress.value = new Map()
-      console.log('[useRoom] 文件共享资源已清理')
+      try {
+        fileShare.cleanup()
+        fileShare = null
+        sharedFiles.value = []
+        uploadProgress.value = new Map()
+        console.log('[useRoom] 文件共享资源已清理')
+      } catch (error) {
+        console.error('[useRoom] 清理文件共享资源时出错:', error)
+      }
     }
     
+    // 清理 PeerRoom 连接
     if (peerRoom) {
       try {
         peerRoom.leave()
+        console.log('[useRoom] PeerRoom.leave() 已调用')
+        // 等待一小段时间确保连接完全关闭
+        await new Promise(resolve => setTimeout(resolve, 100))
         console.log('[useRoom] PeerRoom 已清理')
       } catch (error) {
         console.error('[useRoom] 清理 PeerRoom 时出错:', error)
@@ -501,7 +542,7 @@ export const useRoom = (roomId: string) => {
     sendMessage = null
     sendMetadata = null
     
-    console.log('[useRoom] 房间状态已重置')
+    console.log('[useRoom] 房间清理完成')
   }
 
   /**
