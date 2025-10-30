@@ -49,4 +49,5 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['bittorrent-dht'],
   },
+  base: './'//找资源
 })
