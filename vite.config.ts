@@ -1,10 +1,9 @@
 import { fileURLToPath, URL } from 'node:url'
-import { defineConfig, loadEnv } from 'vite'
+import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd())
+export default defineConfig(() => {
   return {
     plugins: [
       vue(),
@@ -50,6 +49,6 @@ export default defineConfig(({ mode }) => {
     optimizeDeps: {
       exclude: ['bittorrent-dht'],
     },
-    base: env.BASE_URL+'/'  //找资源
+    base: './'  //找资源
   }
 })
