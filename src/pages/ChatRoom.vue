@@ -61,39 +61,15 @@
 
         <!-- cell-1: 中间内容区 - 消息列表 (50%) -->
         <template #cell-1>
-          <div class="main-content">
-            <!-- 消息列表 -->
-            <div class="messages" ref="messagesContainer">
-              <div
-                v-for="msg in messages"
-                :key="msg.id"
-                :class="['message', msg.userId === currentUserId ? 'message-own' : 'message-peer']"
-              >
-                <div 
-                  class="message-header"
-                  :class="msg.userId === currentUserId ? 'message-header-own' : 'message-header-peer'"
-                >
-                  <span class="message-username">{{ msg.username }}</span>
-                  <span class="message-time">{{ formatTime(msg.timestamp) }}</span>
-                </div>
-                <div class="message-content">{{ msg.text }}</div>
-              </div>
-            </div>
-
-            <!-- 输入框 -->
-            <div class="message-input">
-              <input
-                v-model="messageText"
-                @keyup.enter="handleSend"
-                type="text"
-                placeholder="输入消息... (按 Enter 发送)"
-                :disabled="!isConnected"
-              />
-              <button @click="handleSend" :disabled="!isConnected || !messageText.trim()">
-                发送
-              </button>
-            </div>
-          </div>
+          <MessagePanel
+            :messages="messages"
+            :shared-files="sharedFiles"
+            :current-user-id="currentUserId"
+            :is-connected="isConnected"
+            @send-message="handleSendMessage"
+            @send-file="handleSendFile"
+            @download-file="handleFileDownload"
+          />
         </template>
 
         <!-- cell-2: 右侧边栏 - 媒体控制 (25%) -->
@@ -111,6 +87,7 @@ import { useRoom } from '../composables/useRoom'
 import MediaControls from '../components/MediaControls.vue'
 import GridLayout from '../components/GridLayout.vue'
 import UserGrid from '../components/UserGrid.vue'
+import MessagePanel from '../components/MessagePanel.vue'
 
 const props = defineProps<{
   roomId: string
@@ -131,10 +108,11 @@ const {
   updateUsername,
   leaveRoom,
   media,
+  sharedFiles,
+  sendFile,
+  downloadFile,
 } = useRoom(props.roomId)
 
-const messageText = ref('')
-const messagesContainer = ref<HTMLElement | null>(null)
 const showUsernameDialog = ref(false)
 const newUsername = ref('')
 const usernameInput = ref<HTMLInputElement | null>(null)
@@ -152,33 +130,29 @@ onBeforeUnmount(() => {
 })
 
 // 发送消息
-const handleSend = () => {
-  if (messageText.value.trim()) {
-    sendChatMessage(messageText.value)
-    messageText.value = ''
-    scrollToBottom()
+const handleSendMessage = (text: string) => {
+  sendChatMessage(text)
+}
+
+// 发送文件
+const handleSendFile = async (file: File) => {
+  try {
+    await sendFile(file)
+  } catch (error) {
+    console.error('[ChatRoom] 文件发送失败:', error)
+    alert('文件发送失败，请重试')
   }
 }
 
-// 格式化时间
-const formatTime = (timestamp: number) => {
-  const date = new Date(timestamp)
-  return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+// 处理文件下载
+const handleFileDownload = async (fileId: string) => {
+  try {
+    await downloadFile(fileId)
+  } catch (error) {
+    console.error('[ChatRoom] 文件下载失败:', error)
+    alert('文件下载失败，请重试')
+  }
 }
-
-// 滚动到底部
-const scrollToBottom = () => {
-  nextTick(() => {
-    if (messagesContainer.value) {
-      messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
-    }
-  })
-}
-
-// 监听新消息，自动滚动
-watch(messages, () => {
-  scrollToBottom()
-})
 
 // 复制房间号
 const copyRoomLink = () => {
@@ -314,152 +288,6 @@ watch(showUsernameDialog, async (show) => {
 .chat-content {
   flex: 1;
   overflow: hidden;
-}
-
-/* 侧边栏和主内容区样式 */
-.sidebar-content {
-  height: 100%;
-  background: white;
-  overflow-y: auto;
-}
-
-.main-content {
-  height: 100%;
-  background: white;
-  display: flex;
-  flex-direction: column;
-}
-
-/* 消息列表样式 */
-.messages {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.message {
-  display: flex;
-  flex-direction: column;
-  max-width: 70%;
-  animation: slideIn 0.2s ease;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.message-own {
-  align-self: flex-end;
-}
-
-.message-peer {
-  align-self: flex-start;
-}
-
-.message-header {
-  display: flex;
-  margin-bottom: 4px;
-  font-size: 12px;
-}
-
-.message-header-own {
-  justify-content: flex-end;
-}
-
-.message-header-peer {
-  justify-content: flex-start;
-}
-
-.message-username {
-  font-weight: 600;
-  margin-right: 10px;
-  color: #667eea;
-}
-
-.message-time {
-  color: #999;
-}
-
-.message-content {
-  padding: 12px 16px;
-  border-radius: 12px;
-  word-wrap: break-word;
-  line-height: 1.5;
-}
-
-.message-own .message-content {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border-bottom-right-radius: 4px;
-}
-
-.message-peer .message-content {
-  background: #f0f0f0;
-  color: #333;
-  border-bottom-left-radius: 4px;
-}
-
-.message-input {
-  flex-shrink: 0;
-  display: flex;
-  gap: 10px;
-  padding: 20px;
-  border-top: 1px solid #e0e0e0;
-  background: white;
-}
-
-.message-input input {
-  flex: 1;
-  padding: 12px 16px;
-  border: 2px solid #e0e0e0;
-  border-radius: 24px;
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.message-input input:focus {
-  border-color: #667eea;
-}
-
-.message-input input:disabled {
-  background: #f5f5f5;
-  cursor: not-allowed;
-}
-
-.message-input button {
-  padding: 12px 32px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  border-radius: 24px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.2s, opacity 0.2s;
-}
-
-.message-input button:hover:not(:disabled) {
-  transform: translateY(-2px);
-}
-
-.message-input button:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.message-input button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 /* 对话框样式 */

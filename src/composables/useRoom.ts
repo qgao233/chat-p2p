@@ -3,7 +3,7 @@
  * 管理 P2P 聊天房间的所有逻辑
  */
 
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, onUnmounted, watch } from 'vue'
 import { v4 as uuid } from 'uuid'
 import localforage from 'localforage'
 import { 
@@ -17,6 +17,7 @@ import type { Message, UserMetadata } from '../lib'
 import { encryption } from '../services/encryption'
 import { rtcConfig } from '../config/rtc'
 import { useMedia } from './useMedia'
+import { useFileShare } from './useFileShare'
 
 interface Peer {
   peerId: string
@@ -42,11 +43,18 @@ export const useRoom = (roomId: string) => {
   let sendMessage: ((msg: Message, peerId?: string) => void) | null = null
   let sendMetadata: ((data: UserMetadata, peerId?: string) => void) | null = null
 
-  // 创建 peerRoom 的 ref 用于 useMedia
+  // 创建 peerRoom 的 ref 用于 useMedia 和 useFileShare
   const peerRoomRef = computed(() => peerRoom)
   
   // 媒体管理
   const media = useMedia(peerRoomRef)
+  
+  // 文件共享管理（延迟初始化，在 joinRoom 时创建）
+  let fileShare: ReturnType<typeof useFileShare> | null = null
+  
+  // 文件共享状态（使用 ref 确保响应性）
+  const sharedFiles = ref<any[]>([])
+  const uploadProgress = ref<Map<string, number>>(new Map())
 
   // 计算属性 - 验证统计
   const verifiedPeersCount = computed(() => 
@@ -208,6 +216,22 @@ export const useRoom = (roomId: string) => {
       }
     })
 
+    // 初始化文件共享功能（传递 peers 和 privateKey 用于加密）
+    if (peerRoom) {
+      fileShare = useFileShare(peerRoom, peers, privateKey)
+      
+      // 同步 fileShare 的状态到本地 ref
+      watch(fileShare.sharedFiles, (newFiles) => {
+        sharedFiles.value = newFiles
+      }, { deep: true, immediate: true })
+      
+      watch(fileShare.uploadProgress, (newProgress) => {
+        uploadProgress.value = newProgress
+      }, { deep: true, immediate: true })
+      
+      console.log('[useRoom] 文件共享功能已初始化（支持端到端加密）')
+    }
+
     // 监听用户离开 - 使用 NEW_PEER 钩子类型
     peerRoom.onPeerLeave(PeerHookType.NEW_PEER, (peerId) => {
       console.log('用户离开:', peerId)
@@ -360,6 +384,15 @@ export const useRoom = (roomId: string) => {
     // 清理媒体资源
     media.cleanup()
     
+    // 清理文件共享资源
+    if (fileShare) {
+      fileShare.cleanup()
+      fileShare = null
+      sharedFiles.value = []
+      uploadProgress.value = new Map()
+      console.log('[useRoom] 文件共享资源已清理')
+    }
+    
     if (peerRoom) {
       try {
         peerRoom.leave()
@@ -378,6 +411,40 @@ export const useRoom = (roomId: string) => {
     sendMetadata = null
     
     console.log('[useRoom] 房间状态已重置')
+  }
+
+  /**
+   * 发送文件
+   */
+  const sendFile = async (file: File) => {
+    if (!fileShare) {
+      throw new Error('文件共享功能未初始化')
+    }
+    
+    try {
+      await fileShare.uploadFile(file, currentUserId.value, currentUsername.value)
+      console.log('[useRoom] 文件发送成功:', file.name)
+    } catch (error) {
+      console.error('[useRoom] 文件发送失败:', error)
+      throw error
+    }
+  }
+
+  /**
+   * 下载文件
+   */
+  const downloadFile = async (fileId: string) => {
+    if (!fileShare) {
+      throw new Error('文件共享功能未初始化')
+    }
+    
+    try {
+      await fileShare.downloadFile(fileId)
+      console.log('[useRoom] 文件下载成功')
+    } catch (error) {
+      console.error('[useRoom] 文件下载失败:', error)
+      throw error
+    }
   }
 
   // 组件卸载时清理
@@ -413,6 +480,12 @@ export const useRoom = (roomId: string) => {
     
     // 媒体功能
     media,
+    
+    // 文件共享功能
+    sharedFiles,
+    uploadProgress,
+    sendFile,
+    downloadFile,
   }
 }
 

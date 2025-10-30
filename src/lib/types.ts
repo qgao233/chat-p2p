@@ -203,7 +203,35 @@ export interface FileOffer {
   fileName: string
   fileSize: number
   fileType: string
-  [key: string]: string | number
+  magnetURI: string
+  isInline?: boolean
+  encryptedAESKey?: string  // Base64 编码的加密 AES 密钥
+  iv?: string               // Base64 编码的初始化向量
+  [key: string]: string | number | boolean | undefined
+}
+
+/**
+ * 文件元数据接口
+ */
+export interface FileMetadata {
+  id: string
+  name: string
+  size: number
+  type: string
+  magnetURI: string
+  isInline: boolean
+  timestamp: number
+  aesKey?: CryptoKey        // AES 密钥（本地使用）
+  iv?: Uint8Array           // 初始化向量（本地使用）
+}
+
+/**
+ * 文件下载进度接口
+ */
+export interface FileDownloadProgress {
+  fileId: string
+  progress: number
+  status: 'pending' | 'downloading' | 'completed' | 'error'
 }
 
 /**

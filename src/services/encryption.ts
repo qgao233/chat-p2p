@@ -100,6 +100,136 @@ export class EncryptionService {
     const decryptedString = new TextDecoder().decode(decryptedArrayBuffer)
     return decryptedString
   }
+
+  /**
+   * 生成 AES-GCM 密钥（用于文件加密）
+   */
+  generateAESKey = async (): Promise<CryptoKey> => {
+    const key = await window.crypto.subtle.generateKey(
+      {
+        name: 'AES-GCM',
+        length: 256
+      },
+      true,
+      ['encrypt', 'decrypt']
+    )
+    return key
+  }
+
+  /**
+   * 导出 AES 密钥为 Base64 字符串
+   */
+  exportAESKey = async (key: CryptoKey): Promise<string> => {
+    const exported = await window.crypto.subtle.exportKey('raw', key)
+    return arrayBufferToBase64(exported)
+  }
+
+  /**
+   * 从 Base64 字符串导入 AES 密钥
+   */
+  importAESKey = async (keyString: string): Promise<CryptoKey> => {
+    const keyData = base64ToArrayBuffer(keyString)
+    const key = await window.crypto.subtle.importKey(
+      'raw',
+      keyData,
+      {
+        name: 'AES-GCM',
+        length: 256
+      },
+      true,
+      ['encrypt', 'decrypt']
+    )
+    return key
+  }
+
+  /**
+   * 使用 AES-GCM 加密文件
+   */
+  encryptFile = async (
+    file: File,
+    key: CryptoKey
+  ): Promise<{ encryptedData: ArrayBuffer; iv: Uint8Array }> => {
+    // 生成随机 IV（初始化向量）
+    const iv = window.crypto.getRandomValues(new Uint8Array(12))
+    
+    // 读取文件内容
+    const fileData = await file.arrayBuffer()
+    
+    // 加密
+    const encryptedData = await window.crypto.subtle.encrypt(
+      {
+        name: 'AES-GCM',
+        iv: iv
+      },
+      key,
+      fileData
+    )
+    
+    return { encryptedData, iv }
+  }
+
+  /**
+   * 使用 AES-GCM 解密文件
+   */
+  decryptFile = async (
+    encryptedData: ArrayBuffer,
+    key: CryptoKey,
+    iv: Uint8Array
+  ): Promise<ArrayBuffer> => {
+    const decryptedData = await window.crypto.subtle.decrypt(
+      {
+        name: 'AES-GCM',
+        iv: iv
+      },
+      key,
+      encryptedData
+    )
+    
+    return decryptedData
+  }
+
+  /**
+   * 使用 RSA 公钥加密 AES 密钥（用于密钥交换）
+   */
+  encryptAESKey = async (
+    aesKey: CryptoKey,
+    rsaPublicKey: CryptoKey
+  ): Promise<ArrayBuffer> => {
+    const exportedAESKey = await window.crypto.subtle.exportKey('raw', aesKey)
+    const encryptedKey = await window.crypto.subtle.encrypt(
+      algorithmName,
+      rsaPublicKey,
+      exportedAESKey
+    )
+    return encryptedKey
+  }
+
+  /**
+   * 使用 RSA 私钥解密 AES 密钥
+   */
+  decryptAESKey = async (
+    encryptedKey: ArrayBuffer,
+    rsaPrivateKey: CryptoKey
+  ): Promise<CryptoKey> => {
+    const decryptedKeyData = await window.crypto.subtle.decrypt(
+      algorithmName,
+      rsaPrivateKey,
+      encryptedKey
+    )
+    
+    const aesKey = await window.crypto.subtle.importKey(
+      'raw',
+      decryptedKeyData,
+      {
+        name: 'AES-GCM',
+        length: 256
+      },
+      true,
+      ['encrypt', 'decrypt']
+    )
+    
+    return aesKey
+  }
 }
 
 export const encryption = new EncryptionService()
