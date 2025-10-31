@@ -22,9 +22,6 @@
         <button class="btn-icon" @click="copyRoomLink" title="复制房间号">
           📋
         </button>
-        <button class="btn-icon btn-danger" @click="handleLeaveRoom" title="离开房间">
-          🚪
-        </button>
       </div>
     </div>
 
@@ -161,7 +158,6 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  leave: []
   switchRoom: [roomId: string]
 }>()
 
@@ -244,12 +240,6 @@ const copyRoomLink = async () => {
   } catch (error) {
     console.error('复制失败:', error)
   }
-}
-
-// 离开房间
-const handleLeaveRoom = async () => {
-  await leaveRoom()
-  emit('leave')
 }
 
 // 修改用户名

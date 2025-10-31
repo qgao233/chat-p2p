@@ -60,7 +60,7 @@
     <!-- 聊天室 -->
     <div v-else class="room-container">
       <!-- 使用 key 强制重新挂载组件 -->
-      <ChatRoom :key="roomId" :roomId="roomId" @leave="leaveRoom" @switch-room="switchRoom" />
+      <ChatRoom :key="roomId" :roomId="roomId" @switch-room="switchRoom" />
     </div>
   </div>
 </template>
@@ -126,15 +126,6 @@ const switchRoom = (newRoomId: string) => {
   roomId.value = newRoomId
   updateUrl(newRoomId)
   isInRoom.value = true
-}
-
-// 离开房间
-const leaveRoom = () => {
-  isInRoom.value = false
-  roomId.value = ''
-  window.history.pushState({}, '', window.location.pathname)
-  // 离开房间后自动加入公共房间
-  joinPublicRoom()
 }
 </script>
 
