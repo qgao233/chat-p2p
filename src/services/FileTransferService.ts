@@ -11,8 +11,7 @@ import trackerUrls from '../config/trackerUrls'
 import { encryption } from './encryption'
 
 // StreamSaver.js 配置（使用本地文件）
-const STREAM_SAVER_URL = `${import.meta.env.BASE_URL}/vendor/StreamSaver.min.js`
-
+const STREAM_SAVER_URL = `${import.meta.env.VITE_BASE_URL}/vendor/StreamSaver.min.js`
 // 文件类型分类
 const INLINE_MEDIA_TYPES = {
   image: ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'],
