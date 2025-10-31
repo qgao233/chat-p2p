@@ -60,9 +60,9 @@ export class FileTransferService {
 
       // 优化错误处理：区分 tracker 错误和其他错误
       this.client.on('error', (err) => {
-        const errorMessage = err.message || err.toString()
+        const errorMessage = typeof err === 'string' ? err : (err.message || err.toString())
         
-        // Tracker 连接失败是常见情况，不影响 P2P 功能
+        // Tracker 连接失败是常见情况,不影响 P2P 功能
         if (errorMessage.includes('tracker') || 
             errorMessage.includes('WebSocket') ||
             errorMessage.includes('connection')) {
