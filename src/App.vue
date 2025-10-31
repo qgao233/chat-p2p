@@ -59,7 +59,8 @@
 
     <!-- 聊天室 -->
     <div v-else class="room-container">
-      <ChatRoom :roomId="roomId" @leave="leaveRoom" @switch-room="switchRoom" />
+      <!-- 使用 key 强制重新挂载组件 -->
+      <ChatRoom :key="roomId" :roomId="roomId" @leave="leaveRoom" @switch-room="switchRoom" />
     </div>
   </div>
 </template>
