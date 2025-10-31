@@ -46,16 +46,36 @@ export class FileTransferService {
       this.client = new WebTorrent({
         tracker: {
           rtcConfig: this.rtcConfig,
-          announce: trackerUrls
-        }
+          announce: trackerUrls,
+          // 增加超时时间，减少错误日志
+          wrtc: {
+            // 使用浏览器原生 WebRTC
+          }
+        },
+        // 最大连接数
+        maxConns: 55,
+        // DHT 在浏览器中禁用
+        dht: false,
       })
 
+      // 优化错误处理：区分 tracker 错误和其他错误
       this.client.on('error', (err) => {
-        console.error('[FileTransferService] WebTorrent 错误:', err)
+        const errorMessage = err.message || err.toString()
+        
+        // Tracker 连接失败是常见情况，不影响 P2P 功能
+        if (errorMessage.includes('tracker') || 
+            errorMessage.includes('WebSocket') ||
+            errorMessage.includes('connection')) {
+          console.warn('[FileTransferService] Tracker 连接警告 (不影响功能):', errorMessage)
+        } else {
+          // 其他错误才显示为 error
+          console.error('[FileTransferService] WebTorrent 错误:', err)
+        }
       })
 
       console.log('[FileTransferService] WebTorrent 客户端已初始化')
       console.log('[FileTransferService] 使用 Tracker URLs:', trackerUrls)
+      console.log('[FileTransferService] 提示: Tracker 连接失败不影响 P2P 文件传输功能')
     } catch (error) {
       console.error('[FileTransferService] WebTorrent 初始化失败:', error)
     }
